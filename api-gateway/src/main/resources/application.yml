@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # 1. PUBLIC ROUTES
+        - id: public-routes
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/auth/**, 
+              /api/v1/products/**, 
+              /api/v1/categories/**,
+              /api/v1/payment/vnpay-callback
+          filters:
+            - StripPrefix=2
+
+        # 2. AUTHENTICATED ROUTES (CUSTOMER, STAFF, ADMIN)
+        - id: authenticated-routes
+          uri: lb://user-service # Sẽ được định tuyến động
+          predicates:
+            - Path=/api/v1/users/**, 
+              /api/v1/cart/**, 
+              /api/v1/orders/**, 
+              /api/v1/review/**, 
+              /api/v1/payment/create/**
+          filters:
+            - StripPrefix=2
+            - AuthenticationFilter
+
+        # 3. ADMIN & STAFF ROUTES
+        - id: admin-staff-routes
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/v1/admin/**,
+              /api/v1/seller/** # Giữ lại /seller để tương thích nếu FE đã code
+          filters:
+            - StripPrefix=2
+            - AuthorizationFilter # Filter này sẽ kiểm tra role ADMIN hoặc STAFF
