@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
 # Port sẽ được expose tùy theo service (xem bên dưới)
-EXPOSE 8080
+EXPOSE 8761
 
 # Lệnh để khởi chạy ứng dụng khi container bắt đầu
 ENTRYPOINT ["java", "-jar", "app.jar"]
