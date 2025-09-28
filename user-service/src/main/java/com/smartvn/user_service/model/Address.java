@@ -1,70 +1,56 @@
-package com.webanhang.team_project.model;
+package com.smartvn.user_service.model;
 
-import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "addresses")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "address")
 public class Address {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
-    @NotBlank(message = "Full name is required")
-    @Size(max = 50, message = "Full name must be less than 50 characters")
-    @Column(name = "full_name")
+    @Column(name = "full_name", length = 50, nullable = false)
     private String fullName;
 
-    @NotBlank(message = "Province is required")
-    @Size(max = 100, message = "Province must be less than 100 characters")
-    @Column(name = "province")
+    @Column(length = 100, nullable = false)
     private String province;
 
-    @NotBlank(message = "district is required")
-    @Size(max = 50, message = "district must be less than 50 characters")
-    @Column(name = "district")
-    private String district;
-
-    @NotBlank(message = "ward is required")
-    @Size(max = 50, message = "ward must be less than 50 characters")
-    @Column(name = "ward")
+    @Column(length = 50, nullable = false)
     private String ward;
 
-    @NotBlank(message = "street is required")
-    @Size(max = 50, message = "street must be less than 50 characters")
-    @Column(name = "street")
+    @Column(length = 50, nullable = false)
     private String street;
 
-
-    @Size(max = 100, message = "note must be less than 100 characters")
-    @Column(name = "note")
+    @Column(length = 100)
     private String note;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore
-    private User user;
-
-    @NotBlank(message = "Mobile number is required")
-    @Size(max = 15, message = "Mobile number must be less than 15 characters")
-    @Column(name = "phoneNumber")
+    @Column(name = "phone_number", length = 15, nullable = false)
     private String phoneNumber;
 
-    @OneToMany(mappedBy = "shippingAddress", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<Order> orders;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore // Quan trọng: Tránh vòng lặp vô hạn khi serialize JSON
+    private User user;
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 }

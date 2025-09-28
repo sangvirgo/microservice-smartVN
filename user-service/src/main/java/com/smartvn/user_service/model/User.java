@@ -1,114 +1,78 @@
-package com.webanhang.team_project.model;
+package com.smartvn.user_service.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
-@Entity
+@AllArgsConstructor
 public class User {
 
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        private boolean active = true;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        @Size(max = 50, message = "First name must be less than 50 characters")
-        @Column(name = "first_name")
-        private String firstName;
+    @Column(nullable = false)
+    private boolean active = true;
 
-        @Size(max = 50, message = "Last name must be less than 50 characters")
-        @Column(name = "last_name")
-        private String lastName;
+    @Column(name = "first_name", length = 50)
+    private String firstName;
 
-        @NaturalId
-        @Email(message = "Please provide a valid email address")
-        @Size(max = 100, message = "Email must be less than 100 characters")
-        @Column(unique = true, nullable = false)
-        private String email;
+    @Column(name = "last_name", length = 50)
+    private String lastName;
 
-        @Size(min = 8, message = "Password must be at least 8 characters long")
-        private String password;
+    @Email
+    @Column(length = 100, nullable = false, unique = true)
+    private String email;
 
-        @Size(max = 15, message = "Phone number must be less than 15 characters")
-        private String phone;
+    @Column(length = 255)
+    private String password;
 
-        @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-        private List<Address> address = new ArrayList<>();
+    @Column(length = 15)
+    private String phone;
 
-        @Column(name = "created_at")
-        private LocalDateTime createdAt;;
+    @Column(name = "is_banned", nullable = false)
+    private boolean isBanned = false;
 
-        @PrePersist
-        protected void onCreate() {
-                this.createdAt = LocalDateTime.now();
-        }
+    @Column(name = "oauth_provider", length = 50)
+    private String oauthProvider;
 
-        @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-        @JsonManagedReference
-        private Cart cart;
+    @Column(name = "oauth_provider_id", length = 100)
+    private String oauthProviderId;
 
-        @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-        private List<Order> orders;
+    @Column(name = "image_url", length = 255)
+    private String imageUrl;
 
-        @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-        @JsonIgnore
-        private List<Review> reviews = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.EAGER) // EAGER để luôn tải Role cùng với User
+    @JoinColumn(name = "role_id")
+    private Role role;
 
-        @ManyToOne
-        @JoinColumn(name = "role_id")
-        private Role role;
+    @Column(name = "warning_count", nullable = false)
+    private int warningCount = 0;
 
-        @Column(name = "is_banned", nullable = false)
-        private boolean banned = false;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-        // Các trường bổ sung cho OAuth2 -> lưu detail info từ oauth provider
-        private String oauthProvider;
-        private String oauthProviderId;
-        private String imageUrl;
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-        @Column(name = "website")
-        private String website;
+    // Quan hệ với Address, được quản lý bởi service này.
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Address> addresses = new ArrayList<>();
 
-        @Column(name = "business_type")
-        private String businessType;
-
-        @Column(name = "shop_description")
-        private String shopDescription;
-
-        @Column(name = "shop_name")
-        private String shopName;
-
-        public User(String firstName, String lastName, String email, String password, Role role) {
-                this.firstName = firstName;
-                this.lastName = lastName;
-                this.email = email;
-                this.password = password;
-                this.role = role;
-                this.active = false;
-                this.createdAt = LocalDateTime.now();
-        }
-        public User(String firstName, String lastName, String email, String password, Role role, String phone) {
-                this.firstName = firstName;
-                this.lastName = lastName;
-                this.email = email;
-                this.password = password;
-                this.role = role;
-                this.phone = phone;
-                this.active = false;
-                this.createdAt = LocalDateTime.now();
-        }
 }
-

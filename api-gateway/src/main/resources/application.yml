@@ -1,39 +1,51 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: api-gateway
+  config:
+    import: "optional:configserver:http://config-server:8888" # Should use bootstrap properties for this
   cloud:
     gateway:
       routes:
-        # 1. PUBLIC ROUTES
-        - id: public-routes
-          uri: lb://user-service
+        # === 1. User Service Routes (Auth and User Profiles) ===
+        - id: user-service-route
+          uri: lb://techshop-user-service
           predicates:
-            - Path=/api/v1/auth/**, 
-              /api/v1/products/**, 
-              /api/v1/categories/**,
-              /api/v1/payment/vnpay-callback
+            - Path=/api/v1/auth/**, /api/v1/users/**
+          filters:
+            - StripPrefix=2
+            # AuthenticationFilter will be applied in code for /api/v1/users/**
+
+        # === 2. Product Service Routes (Public Catalog) ===
+        - id: product-service-route
+          uri: lb://techshop-product-service
+          predicates:
+            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/review/**, /api/v1/images/**
           filters:
             - StripPrefix=2
 
-        # 2. AUTHENTICATED ROUTES (CUSTOMER, STAFF, ADMIN)
-        - id: authenticated-routes
-          uri: lb://user-service # Sẽ được định tuyến động
+        # === 3. Order Service Routes (Authenticated Users) ===
+        - id: order-service-route
+          uri: lb://techshop-order-service
           predicates:
-            - Path=/api/v1/users/**, 
-              /api/v1/cart/**, 
-              /api/v1/orders/**, 
-              /api/v1/review/**, 
-              /api/v1/payment/create/**
+            - Path=/api/v1/cart/**, /api/v1/orders/**, /api/v1/payment/**
           filters:
             - StripPrefix=2
-            - AuthenticationFilter
+            # AuthenticationFilter will be applied in code
 
-        # 3. ADMIN & STAFF ROUTES
-        - id: admin-staff-routes
-          uri: lb://admin-service
+        # === 4. Admin & Staff Routes ===
+        - id: admin-service-route
+          uri: lb://techshop-admin-service
           predicates:
-            - Path=/api/v1/admin/**,
-              /api/v1/seller/** # Giữ lại /seller để tương thích nếu FE đã code
+            - Path=/api/v1/admin/**
           filters:
             - StripPrefix=2
-            - AuthorizationFilter # Filter này sẽ kiểm tra role ADMIN hoặc STAFF
+            # AuthorizationFilter will be applied in code
+
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/

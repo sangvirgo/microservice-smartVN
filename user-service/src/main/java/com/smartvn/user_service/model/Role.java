@@ -1,18 +1,22 @@
-package com.webanhang.team_project.model;
+package com.smartvn.user_service.model;
 
-import com.webanhang.team_project.enums.UserRole;
+import com.smartvn.user_service.enums.UserRole;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.Collection;
-import java.util.HashSet;
+import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "roles")
 @Getter
 @Setter
 @NoArgsConstructor
-@Entity
+@AllArgsConstructor
 public class Role {
 
     @Id
@@ -20,12 +24,18 @@ public class Role {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50, nullable = false, unique = true)
     private UserRole name;
 
-    @OneToMany(mappedBy = "role",  cascade = CascadeType.ALL, orphanRemoval = true)
-    private Collection<User> users = new HashSet<>();
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    public Role(UserRole name) {
-        this.name = name;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public Role(UserRole role) {
+        this.name = role;
     }
 }
