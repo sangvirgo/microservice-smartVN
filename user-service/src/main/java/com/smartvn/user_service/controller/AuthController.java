@@ -31,11 +31,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-
+//@RequestMapping("${api.prefix}/auth")
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("${api.prefix}/auth")
+@RequestMapping("/auth")
 public class AuthController {
     private final JwtUtils jwtUtils;
     private final CookieUtils cookieUtils;
