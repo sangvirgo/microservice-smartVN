@@ -61,23 +61,41 @@ public class AuthController {
     public ResponseEntity<ApiResponse> authenticateUser(@RequestBody LoginRequest request,
                                                         HttpServletResponse response) {
         try {
+            // Kiểm tra user tồn tại và trạng thái TRƯỚC KHI authenticate
+            Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+
+            if (userOptional.isEmpty()) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Email hoặc mật khẩu không đúng!"));
+            }
+
+            User user = userOptional.get();
+
+            // Kiểm tra tài khoản có bị ban không
+            if (user.isBanned()) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Tài khoản của bạn đã bị khóa."));
+            }
+
+            // Kiểm tra tài khoản đã được kích hoạt chưa
+            if (!user.isActive()) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email để xác thực."));
+            }
+
+            // Tiến hành authenticate nếu mọi thứ OK
             Authentication authentication = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-            // --- Logic đăng nhập thành công (giữ nguyên) ---
+            // Tạo tokens
             String accessToken = jwtUtils.generateAccessToken(authentication);
             String refreshToken = jwtUtils.generateRefreshToken(request.getEmail());
             cookieUtils.addRefreshTokenCookie(response, refreshToken, refreshTokenExpirationTime);
 
-            AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
-            User user = userRepository.findById(userDetails.getId()).orElseThrow();
-
-            // Thêm một lần kiểm tra nữa để chắc chắn (dù AppUserDetailsService đã kiểm tra)
-            if (!user.isActive() || user.isBanned()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ApiResponse.error("Tài khoản của bạn bị cấm hoặc chưa được kích hoạt."));
-            }
-
+            // Chuẩn bị response data
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("accessToken", accessToken);
 
@@ -94,25 +112,16 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success(responseData, "Đăng nhập thành công"));
 
         } catch (AuthenticationException e) {
-            // --- SỬA LẠI KHỐI CATCH ĐỂ THÔNG MINH HƠN ---
-            if (e instanceof DisabledException) {
-                // Nếu là lỗi DisabledException, có nghĩa là tài khoản chưa active hoặc bị banned
-                // Dựa vào message được ném ra từ AppUserDetailsService để phân biệt
-                if (e.getMessage().contains("banned")) {
-                    return ResponseEntity
-                            .status(HttpStatus.FORBIDDEN) // Lỗi 403 Forbidden
-                            .body(ApiResponse.error("Tài khoản của bạn đã bị khóa."));
-                } else {
-                    return ResponseEntity
-                            .status(HttpStatus.UNAUTHORIZED) // Lỗi 401 Unauthorized
-                            .body(ApiResponse.error("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email để xác thực."));
-                }
-            }
-
-            // Đối với tất cả các lỗi xác thực khác (như sai mật khẩu - BadCredentialsException)
+            // Chỉ bắt lỗi sai mật khẩu
+            log.error("Authentication failed for email: {}", request.getEmail(), e);
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Email hoặc mật khẩu không đúng!"));
+        } catch (Exception e) {
+            log.error("Unexpected error during login: ", e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau."));
         }
     }
 
