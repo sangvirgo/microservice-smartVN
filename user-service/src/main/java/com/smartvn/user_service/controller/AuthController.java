@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -31,6 +32,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
 //@RequestMapping("${api.prefix}/auth")
 @RestController
 @RequiredArgsConstructor
@@ -48,18 +51,32 @@ public class AuthController {
     @Value("${auth.token.refreshExpirationInMils}")
     private Long refreshTokenExpirationTime;
 
+// Trong file AuthController.java
+// Thay thế phương thức cũ bằng phương thức này
+
+// Trong file AuthController.java
+// Thay thế phương thức cũ bằng phương thức này
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> authenticateUser(@RequestBody LoginRequest request,
-            HttpServletResponse response) {
+                                                        HttpServletResponse response) {
         try {
             Authentication authentication = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+
+            // --- Logic đăng nhập thành công (giữ nguyên) ---
             String accessToken = jwtUtils.generateAccessToken(authentication);
             String refreshToken = jwtUtils.generateRefreshToken(request.getEmail());
             cookieUtils.addRefreshTokenCookie(response, refreshToken, refreshTokenExpirationTime);
 
             AppUserDetails userDetails = (AppUserDetails) authentication.getPrincipal();
             User user = userRepository.findById(userDetails.getId()).orElseThrow();
+
+            // Thêm một lần kiểm tra nữa để chắc chắn (dù AppUserDetailsService đã kiểm tra)
+            if (!user.isActive() || user.isBanned()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Tài khoản của bạn bị cấm hoặc chưa được kích hoạt."));
+            }
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("accessToken", accessToken);
@@ -71,10 +88,28 @@ public class AuthController {
             userMap.put("lastName", user.getLastName());
             userMap.put("role", user.getRole().getName().name());
             userMap.put("isActive", user.isActive());
+            userMap.put("isBanned", user.isBanned());
             responseData.put("user", userMap);
 
             return ResponseEntity.ok(ApiResponse.success(responseData, "Đăng nhập thành công"));
+
         } catch (AuthenticationException e) {
+            // --- SỬA LẠI KHỐI CATCH ĐỂ THÔNG MINH HƠN ---
+            if (e instanceof DisabledException) {
+                // Nếu là lỗi DisabledException, có nghĩa là tài khoản chưa active hoặc bị banned
+                // Dựa vào message được ném ra từ AppUserDetailsService để phân biệt
+                if (e.getMessage().contains("banned")) {
+                    return ResponseEntity
+                            .status(HttpStatus.FORBIDDEN) // Lỗi 403 Forbidden
+                            .body(ApiResponse.error("Tài khoản của bạn đã bị khóa."));
+                } else {
+                    return ResponseEntity
+                            .status(HttpStatus.UNAUTHORIZED) // Lỗi 401 Unauthorized
+                            .body(ApiResponse.error("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email để xác thực."));
+                }
+            }
+
+            // Đối với tất cả các lỗi xác thực khác (như sai mật khẩu - BadCredentialsException)
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Email hoặc mật khẩu không đúng!"));
@@ -145,20 +180,12 @@ public class AuthController {
                     .body(ApiResponse.error("Email không được để trống."));
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-        if (user == null) {
-            // Security consideration: Avoid confirming if an email is registered or not here.
-            // You might want to return a generic success message even if the email doesn't exist
-            // to prevent email enumeration attacks. However, for user experience,
-            // the current "Not Found" is clearer during development/testing.
-            // Let's keep the "Not Found" for now, but be aware of this.
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error("Email chưa được đăng ký hoặc không hợp lệ."));
         }
-
-        // --- Add cooldown check ---
         if (!otpService.isResendAllowed(email)) {
             long remainingSeconds = otpService.getRemainingCooldownSeconds(email);
             String waitMessage = String.format("Vui lòng đợi %d giây trước khi yêu cầu mã OTP mới.", remainingSeconds);
@@ -168,7 +195,6 @@ public class AuthController {
                     .body(ApiResponse.error(waitMessage));
         }
 
-        // --- Proceed if allowed ---
         try {
             String otp = otpService.generateOtp(email); // This now also updates the generation time
             otpService.sendOtpEmail(email, otp);

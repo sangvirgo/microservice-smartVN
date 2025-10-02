@@ -8,9 +8,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
-    @Value("${api.prefix}")
-    private String API;
-
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         // Danh sách các pattern của origin được phép
@@ -21,7 +18,7 @@ public class CorsConfig implements WebMvcConfigurer {
             "https://*.vercel.app" // Chấp nhận tất cả các tên miền phụ của vercel.app
         };
 
-        registry.addMapping(API + "/**")
+        registry.addMapping("/**")
                 // Sử dụng allowedOriginPatterns thay cho allowedOrigins
                 .allowedOriginPatterns(allowedOriginPatterns)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH") // Thêm PATCH nếu cần

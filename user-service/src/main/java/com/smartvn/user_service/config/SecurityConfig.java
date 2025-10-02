@@ -33,8 +33,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityConfig {
-    @Value("${api.prefix}")
-    private String API;
+//    @Value("${api.prefix}")
+//    private String API;
 
     private final AppUserDetailsService userDetailsService;
     private final JwtEntryPoint authEntryPoint;
@@ -69,7 +69,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        List<String> securedUrls = List.of(API + "/cart/**", API + "/cartItems/**", API + "/orders/**");
+        List<String> securedUrls = List.of("/cart/**", "/cartItems/**", "/orders/**");
 
         http
                 .csrf(AbstractHttpConfigurer::disable)

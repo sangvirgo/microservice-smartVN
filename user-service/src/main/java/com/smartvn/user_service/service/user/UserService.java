@@ -37,7 +37,7 @@ public class UserService implements IUserService {
     @Transactional
     public void registerUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EntityExistsException("Email already exists");
+            throw new EntityExistsException("Email '" + request.getEmail() + "' đã được sử dụng.");
         }
         User user = new User();
         user.setEmail(request.getEmail());

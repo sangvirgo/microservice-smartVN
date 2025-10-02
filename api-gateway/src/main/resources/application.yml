@@ -11,7 +11,7 @@ spring:
       routes:
         # === 1. User Service Routes (Auth and User Profiles) ===
         - id: user-service-route
-          uri: lb://techshop-user-service
+          uri: lb://user-service
           predicates:
             - Path=/api/v1/auth/**, /api/v1/users/**
           filters:
@@ -20,7 +20,7 @@ spring:
 
         # === 2. Product Service Routes (Public Catalog) ===
         - id: product-service-route
-          uri: lb://techshop-product-service
+          uri: lb://product-service
           predicates:
             - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/review/**, /api/v1/images/**
           filters:
@@ -28,7 +28,7 @@ spring:
 
         # === 3. Order Service Routes (Authenticated Users) ===
         - id: order-service-route
-          uri: lb://techshop-order-service
+          uri: lb://order-service
           predicates:
             - Path=/api/v1/cart/**, /api/v1/orders/**, /api/v1/payment/**
           filters:
@@ -37,7 +37,7 @@ spring:
 
         # === 4. Admin & Staff Routes ===
         - id: admin-service-route
-          uri: lb://techshop-admin-service
+          uri: lb://admin-service
           predicates:
             - Path=/api/v1/admin/**
           filters:
