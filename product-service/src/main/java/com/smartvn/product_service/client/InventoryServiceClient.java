@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-// "techshop-inventory-service" là tên đã đăng ký trên Eureka Server
-@FeignClient(name = "inventory-service")
+// ✅ Thêm fallback
+@FeignClient(name = "inventory-service", fallback = InventoryServiceFallback.class)
 public interface InventoryServiceClient {
 
     @GetMapping("/api/v1/internal/inventories/product/{productId}")

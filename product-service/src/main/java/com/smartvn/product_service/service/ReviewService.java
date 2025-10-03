@@ -1,6 +1,9 @@
 package com.smartvn.product_service.service;
 
+import com.smartvn.product_service.client.UserServiceClient;
+import com.smartvn.product_service.dto.ReviewDTO;
 import com.smartvn.product_service.dto.ReviewRequest;
+import com.smartvn.product_service.dto.UserInfoDTO;
 import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.model.Review;
@@ -23,15 +26,8 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
+    private final UserServiceClient userServiceClient; // ✅ Thêm
 
-    /**
-     * Tạo một bài đánh giá mới cho sản phẩm.
-     *
-     * @param userId        ID của người dùng viết đánh giá (lấy từ security context hoặc token).
-     * @param productId     ID của sản phẩm được đánh giá.
-     * @param reviewRequest DTO chứa thông tin đánh giá.
-     * @return Entity Review đã được tạo.
-     */
     @Transactional
     public Review createReview(Long userId, Long productId, ReviewRequest reviewRequest) {
         Product product = productRepository.findById(productId)
@@ -42,37 +38,50 @@ public class ReviewService {
         review.setProduct(product);
         review.setRating(reviewRequest.getRating());
         review.setReviewContent(reviewRequest.getContent());
-        review.setStatus("PENDING"); // Mặc định là chờ duyệt
+        review.setStatus("PENDING");
 
         Review savedReview = reviewRepository.save(review);
         log.info("Created a new review with id {} for product {}", savedReview.getId(), productId);
 
-        // Sau khi lưu review, cập nhật lại rating cho sản phẩm
         updateProductRating(productId);
 
         return savedReview;
     }
 
-    /**
-     * Lấy danh sách các bài đánh giá của một sản phẩm (phân trang).
-     *
-     * @param productId ID của sản phẩm.
-     * @param pageable  Thông tin phân trang.
-     * @return Page chứa các bài đánh giá.
-     */
-    public Page<Review> getProductReviews(Long productId, Pageable pageable) {
+    // ✅ Thêm method mới để convert Review sang ReviewDTO có thông tin User
+    public ReviewDTO getReviewDTO(Review review) {
+        ReviewDTO dto = new ReviewDTO(review);
+
+        try {
+            log.debug("Fetching user info for userId: {}", review.getUserId());
+            UserInfoDTO userInfo = userServiceClient.getUserInfo(review.getUserId());
+
+            dto.setUserFirstName(userInfo.getFirstName());
+            dto.setUserLastName(userInfo.getLastName());
+            dto.setUserAvatar(userInfo.getAvatar());
+
+        } catch (Exception e) {
+            log.error("Failed to fetch user info for userId: {}. Error: {}",
+                    review.getUserId(), e.getMessage());
+            // Fallback: set giá trị mặc định
+            dto.setUserFirstName("Anonymous");
+            dto.setUserLastName("");
+            dto.setUserAvatar(null);
+        }
+
+        return dto;
+    }
+
+    // ✅ Update method này để trả về Page<ReviewDTO> thay vì Page<Review>
+    public Page<ReviewDTO> getProductReviews(Long productId, Pageable pageable) {
         if (!productRepository.existsById(productId)) {
             throw new AppException("Product not found with id: " + productId, HttpStatus.NOT_FOUND);
         }
-        return reviewRepository.findByProductId(productId, pageable);
+
+        Page<Review> reviews = reviewRepository.findByProductId(productId, pageable);
+        return reviews.map(this::getReviewDTO);
     }
 
-    /**
-     * [PRIVATE] Cập nhật lại số lượt đánh giá và điểm trung bình của sản phẩm.
-     * Được gọi sau khi có review mới hoặc review được cập nhật/xóa.
-     *
-     * @param productId ID của sản phẩm cần cập nhật.
-     */
     private void updateProductRating(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException("Product not found while updating rating: " + productId, HttpStatus.NOT_FOUND));
@@ -87,7 +96,6 @@ public class ReviewService {
                     .mapToInt(Review::getRating)
                     .sum();
             double average = totalRating / reviews.size();
-            // Làm tròn đến 1 chữ số thập phân
             double roundedAverage = Math.round(average * 10.0) / 10.0;
 
             product.setNumRatings(reviews.size());

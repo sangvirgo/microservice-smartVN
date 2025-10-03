@@ -12,17 +12,18 @@ public class ReviewDTO {
     private Long userId;
     private String userFirstName;
     private String userLastName;
+    private String userAvatar; // Thêm field này
     private LocalDateTime createdAt;
     private Integer rating;
 
     public ReviewDTO(Review review) {
         this.id = review.getId();
-        this.review = review.getContent();
+        this.review = review.getReviewContent(); // ✅ FIX: Đổi từ getContent() -> getReviewContent()
         this.productId = review.getProduct().getId();
-        this.userFirstName = review.getUser().getFirstName();
-        this.userLastName = review.getUser().getLastName();
+        this.userId = review.getUserId();
         this.createdAt = review.getCreatedAt();
         this.rating = review.getRating();
-        this.userId = review.getUser().getId();
+
+        // userFirstName, userLastName, userAvatar sẽ được set sau khi gọi UserService
     }
-} 
+}
