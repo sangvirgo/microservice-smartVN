@@ -1,6 +1,7 @@
 package com.smartvn.product_service.dto.response;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +9,7 @@ import java.util.Map;
 
 @Data
 @NoArgsConstructor
+@Builder
 public class ApiResponse<T> {
     private T data;              // Dữ liệu trả về
     private String message;      // Thông báo mô tả

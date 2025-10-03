@@ -1,64 +1,88 @@
 package com.smartvn.product_service.controller;
 
-
-import com.cloudinary.Api;
-import com.smartvn.product_service.dto.category.CategoryDTO;
-import com.smartvn.product_service.model.Category;
 import com.smartvn.product_service.dto.response.ApiResponse;
-import com.smartvn.product_service.service.category.ICategoryService;
+import com.smartvn.product_service.model.Category;
+import com.smartvn.product_service.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
+@RequestMapping("/categories")
 @RequiredArgsConstructor
-@RequestMapping("${api.prefix}/categories")
 public class CategoryController {
-    private final ICategoryService categoryService;
 
-    @GetMapping("/")
-    public ResponseEntity<ApiResponse> getAllByParentAndSub() {
-        List<Category> categories = categoryService.getAllParentCategories();
-        List<CategoryDTO> categoryDTOs = categories.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(categoryDTOs, "Get all categories success"));
-    }
+    private final CategoryService categoryService;
 
-    @GetMapping("/all")
-    public ResponseEntity<ApiResponse> getAllCategories() {
+    /**
+     * API để lấy tất cả danh mục.
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Category>>> getAllCategories() {
         List<Category> categories = categoryService.getAllCategories();
-        return ResponseEntity.ok().body(ApiResponse.success(categories,"Get success"));
+
+        ApiResponse<List<Category>> response = ApiResponse.<List<Category>>builder()
+                .message("Categories fetched successfully.")
+                .result(categories)
+                .build();
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/parent")
-    public ResponseEntity<ApiResponse> getAllParentCategories() {
-        List<Category> parentCategories = categoryService.getAllParentCategories();
-        return ResponseEntity.ok().body(ApiResponse.success(parentCategories,"Get parent categories success"));
+    /**
+     * API để lấy thông tin một danh mục theo ID.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Category>> getCategoryById(@PathVariable Long id) {
+        Category category = categoryService.findCategoryById(id);
+
+        ApiResponse<Category> response = ApiResponse.<Category>builder()
+                .message("Category fetched successfully.")
+                .result(category)
+                .build();
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{topCategory}")
-    public ResponseEntity<ApiResponse> getChildTopCategories(@PathVariable("topCategory") String topCategory) {
-        List<Category> childCategories = categoryService.getChildTopCategories(topCategory);
-        return ResponseEntity.ok().body(ApiResponse.success(childCategories,"Get child categories success"));
+    // --- Các endpoint dưới đây nên được bảo vệ, chỉ dành cho ADMIN ---
+
+    /**
+     * API để tạo danh mục mới.
+     */
+    @PostMapping
+    public ResponseEntity<ApiResponse<Category>> createCategory(@RequestBody CreateCategoryRequest request) {
+        Category newCategory = categoryService.createCategory(request.getName(), request.getParentName());
+
+        ApiResponse<Category> response = ApiResponse.<Category>builder()
+                .message("Category created successfully.")
+                .result(newCategory)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @GetMapping("/categories")
-    public ResponseEntity<ApiResponse> getCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        List<CategoryDTO> categoryDTOs = categories.stream()
-                .map(this::convertToDTO)
-                .toList();
+    /**
+     * API để xóa một danh mục.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
+        categoryService.deleteCategory(id);
 
-        return ResponseEntity.ok(ApiResponse.success(categoryDTOs, "Get categories successfully"));
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Category with id " + id + " deleted successfully.")
+                .build();
+        return ResponseEntity.ok(response);
     }
 
-    private CategoryDTO convertToDTO(Category category) {
-        CategoryDTO dto = new CategoryDTO(category);
-        return dto;
-    }
+    // DTO nội bộ cho request tạo category
+    static class CreateCategoryRequest {
+        private String name;
+        private String parentName;
 
+        // Getters and Setters
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getParentName() { return parentName; }
+        public void setParentName(String parentName) { this.parentName = parentName; }
+    }
 }

@@ -1,88 +1,114 @@
 package com.smartvn.product_service.service;
 
-
-import com.smartvn.product_service.dto.CategoryDTO;
-import com.smartvn.product_service.dto.response.ApiResponse;
+import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Category;
 import com.smartvn.product_service.repository.CategoryRepository;
-import jakarta.persistence.EntityExistsException;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class CategoryService implements com.smartvn.product_service.service.category.ICategoryService {
-   private final CategoryRepository categoryRepository;
+@Slf4j
+public class CategoryService {
 
-   @Override
-   public Category addCategory(Category category) {
-       return Optional.of(category)
-               .filter(c -> !categoryRepository.existsByName(c.getName()))
-               .map(categoryRepository :: save)
-               .orElseThrow(() -> new EntityExistsException(category.getName() + "already exists"));
-   }
+    private final CategoryRepository categoryRepository;
 
-   @Override
-   public Category updateCategory(Category category) {
-       // Đảm bảo cấp bậc không vượt quá 2
-       if (category.getParentCategory() != null) {
-           Category parentCategory = findCategoryById(category.getParentCategory().getId());
-           if (parentCategory.getParentCategory() != null) {
-               throw new EntityExistsException(parentCategory.getName() + "already exists");
-           }
-           category.setLevel(2);
-           category.setParent(false);
-       } else {
-           category.setLevel(1);
-           category.setParent(true);
-       }
+    /**
+     * Tạo một danh mục mới.
+     * Tự động xử lý việc tạo danh mục cha (level 1) và danh mục con (level 2).
+     *
+     * @param name       Tên của danh mục cần tạo.
+     * @param parentName Tên của danh mục cha (null nếu là danh mục cấp 1).
+     * @return Entity Category đã được tạo.
+     */
+    @Transactional
+    public Category createCategory(String name, String parentName) {
+        if (categoryRepository.findByName(name).isPresent()) {
+            throw new AppException("Category with name '" + name + "' already exists.", HttpStatus.BAD_REQUEST);
+        }
 
-       return Optional.ofNullable(findCategoryById(category.getId()))
-               .map(oldCategory -> {
-                   oldCategory.setName(category.getName());
-                   return categoryRepository.save(oldCategory);
-               }).orElseThrow(() -> new EntityNotFoundException("Category not found"));
-   }
+        Category newCategory = new Category();
+        newCategory.setName(name);
+        newCategory.setIsParent(true); // Mặc định là parent, sẽ thay đổi nếu có parentName
 
+        if (parentName != null && !parentName.isEmpty()) {
+            // Đây là danh mục cấp 2
+            Category parentCategory = categoryRepository.findByName(parentName)
+                    .orElseThrow(() -> new AppException("Parent category '" + parentName + "' not found.", HttpStatus.NOT_FOUND));
 
-   @Override
-   public List<Category> getAllCategories() {
-       return categoryRepository.findAll();
-   }
+            if (parentCategory.getLevel() != 1) {
+                throw new AppException("Parent category must be a level 1 category.", HttpStatus.BAD_REQUEST);
+            }
 
-   @Override
-   public Category findCategoryByName(String name) {
-       return categoryRepository.findByName(name);
-   }
+            newCategory.setParentCategory(parentCategory);
+            newCategory.setLevel(2);
+            newCategory.setIsParent(false);
+        } else {
+            // Đây là danh mục cấp 1
+            newCategory.setLevel(1);
+        }
 
-   @Override
-   public Category findCategoryById(Long categoryId) {
-       return categoryRepository.findById(categoryId)
-               .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-   }
-
-    @Override
-    public List<Category> getAllParentCategories() {
-        return categoryRepository.findByLevel(1);
+        log.info("Creating new category: {}", newCategory.getName());
+        return categoryRepository.save(newCategory);
     }
 
-    @Override
-    public List<Category> getChildTopCategories(String topCategory) {
-        // Tạo đối tượng Pageable yêu cầu trang đầu tiên (index 0) với 5 phần tử
-        Pageable limit = PageRequest.of(0, 5);
-        // Gọi phương thức repository đã sửa đổi
-        return categoryRepository.findByParentCategoryNameIgnoreCase(topCategory, limit);
+    /**
+     * Tìm một danh mục theo tên.
+     *
+     * @param name Tên danh mục.
+     * @return Entity Category.
+     */
+    public Category findCategoryByName(String name) {
+        return categoryRepository.findByName(name)
+                .orElseThrow(() -> new AppException("Category not found with name: " + name, HttpStatus.NOT_FOUND));
     }
 
-//    @Override
-//    public List<Category> getAllCategories() {
-//        return categoryRepository.findAll();
-//    }
+    /**
+     * Tìm một danh mục theo ID.
+     *
+     * @param id ID danh mục.
+     * @return Entity Category.
+     */
+    public Category findCategoryById(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new AppException("Category not found with id: " + id, HttpStatus.NOT_FOUND));
+    }
 
+    /**
+     * Lấy tất cả các danh mục trong hệ thống.
+     *
+     * @return List các Category.
+     */
+    public List<Category> getAllCategories() {
+        return categoryRepository.findAll();
+    }
+
+    /**
+     * Xóa một danh mục.
+     * Sẽ báo lỗi nếu danh mục này đang được sử dụng bởi bất kỳ sản phẩm nào.
+     *
+     * @param categoryId ID của danh mục cần xóa.
+     */
+    @Transactional
+    public void deleteCategory(Long categoryId) {
+        Category category = findCategoryById(categoryId);
+
+        // Kiểm tra xem danh mục có sản phẩm nào không
+        if (category.getProducts() != null && !category.getProducts().isEmpty()) {
+            throw new AppException("Cannot delete category. It is currently in use by " + category.getProducts().size() + " products.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Kiểm tra xem danh mục cha có danh mục con nào không
+        if (category.getIsParent() && category.getSubCategories() != null && !category.getSubCategories().isEmpty()) {
+            throw new AppException("Cannot delete parent category with active sub-categories.", HttpStatus.BAD_REQUEST);
+        }
+
+        log.warn("Deleting category: {}", category.getName());
+        categoryRepository.delete(category);
+    }
 }

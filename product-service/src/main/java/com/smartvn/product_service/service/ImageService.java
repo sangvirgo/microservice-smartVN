@@ -1,11 +1,13 @@
-package com.smartvn.product_service.service.image;
+package com.smartvn.product_service.service;
 
-import com.smartvn.product_service.dto.image.ImageDTO;
+import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Image;
 import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.repository.ImageRepository;
+import com.smartvn.product_service.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,81 +15,89 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ImageService implements IImageService{
+public class ImageService {
+
     private final ImageRepository imageRepository;
+    private final ProductRepository productRepository;
     private final CloudinaryService cloudinaryService;
 
-    @Override
-    public Image uploadImageForProduct(MultipartFile file, Product product) throws IOException {
+    /**
+     * Tải lên một hình ảnh mới và liên kết nó với một sản phẩm.
+     *
+     * @param productId ID của sản phẩm.
+     * @param file      File hình ảnh.
+     * @return Entity Image đã được lưu.
+     */
+    @Transactional
+    public Image uploadImageForProduct(Long productId, MultipartFile file) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException("Product not found with id: " + productId, HttpStatus.NOT_FOUND));
+
         try {
-            Map<String, Object> uploadResult = cloudinaryService.uploadImage(file);
+            Map<String, String> uploadResult = cloudinaryService.upload(file);
 
             Image image = new Image();
-            image.setProduct(product);
-            image.setFileName(file.getOriginalFilename());
+            image.setFileName(uploadResult.get("public_id")); // Lưu public_id để xóa sau này
             image.setFileType(file.getContentType());
-            image.setDownloadUrl((String) uploadResult.get("url"));
+            image.setDownloadUrl(uploadResult.get("url"));
+            image.setProduct(product);
 
+            log.info("Image uploaded for product {}: {}", productId, image.getDownloadUrl());
             return imageRepository.save(image);
+
         } catch (IOException e) {
-            log.error("Lỗi khi tải hình ảnh lên cho sản phẩm: {}", product.getId(), e);
-            throw new IOException("Không thể tải lên hình ảnh: " + e.getMessage());
+            log.error("Failed to upload image for product {}: {}", productId, e.getMessage());
+            throw new AppException("Failed to upload image", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @Override
+    /**
+     * Xóa một hình ảnh dựa trên ID của nó.
+     *
+     * @param imageId ID của hình ảnh cần xóa.
+     */
     @Transactional
     public void deleteImage(Long imageId) {
         Image image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Hình ảnh không tồn tại"));
+                .orElseThrow(() -> new AppException("Image not found with id: " + imageId, HttpStatus.NOT_FOUND));
 
-        // Xóa khỏi Cloudinary
-        String publicId = cloudinaryService.extractPublicIdFromUrl(image.getDownloadUrl());
-        if (publicId != null) {
-            try {
-                cloudinaryService.deleteImage(publicId);
-            } catch (Exception e) {
-                log.error("Không thể xóa hình ảnh từ Cloudinary: {}", publicId, e);
-            }
+        try {
+            cloudinaryService.delete(image.getFileName()); // Dùng public_id (lưu trong fileName) để xóa
+            imageRepository.delete(image);
+            log.info("Successfully deleted image with id: {}", imageId);
+        } catch (IOException e) {
+            log.error("Failed to delete image {} from Cloudinary: {}", imageId, e.getMessage());
+            throw new AppException("Failed to delete image from storage", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        imageRepository.delete(image);
     }
 
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ImageDTO> getProductImages(Long productId) {
-        List<Image> images = imageRepository.findByProductId(productId);
-        List<ImageDTO> imagesDTO = images.stream()
-                .map(ImageDTO::new)
-                .toList();
-        return imagesDTO;
-    }
-
+    /**
+     * Xóa tất cả hình ảnh liên quan đến một sản phẩm.
+     * Thường được gọi khi sản phẩm bị xóa.
+     *
+     * @param productId ID của sản phẩm.
+     */
     @Transactional
     public void deleteAllProductImages(Long productId) {
         List<Image> images = imageRepository.findByProductId(productId);
-
-        // Xóa từng ảnh trên Cloudinary
-        for (Image image : images) {
-            String publicId = cloudinaryService.extractPublicIdFromUrl(image.getDownloadUrl());
-            if (publicId != null) {
-                try {
-                    cloudinaryService.deleteImage(publicId);
-                } catch (Exception e) {
-                    // Log lỗi nhưng vẫn tiếp tục xóa các ảnh khác
-                    log.error("Không thể xóa hình ảnh từ Cloudinary: {}", publicId, e);
-                }
-            }
+        if (images.isEmpty()) {
+            return;
         }
 
-        // Xóa tất cả ảnh từ database
-        imageRepository.deleteByProductId(productId);
-        log.info("Đã xóa thành công tất cả hình ảnh của sản phẩm {}", productId);
+        for (Image image : images) {
+            try {
+                cloudinaryService.delete(image.getFileName());
+            } catch (IOException e) {
+                // Ghi log lỗi nhưng vẫn tiếp tục để xóa các ảnh khác
+                log.error("Failed to delete image {} (public_id: {}) from Cloudinary for product {}: {}",
+                        image.getId(), image.getFileName(), productId, e.getMessage());
+            }
+        }
+        imageRepository.deleteAll(images);
+        log.info("Deleted all {} images for product {}", images.size(), productId);
     }
 }
