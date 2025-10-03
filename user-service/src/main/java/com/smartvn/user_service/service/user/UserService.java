@@ -4,6 +4,8 @@ import com.smartvn.user_service.dto.address.AddAddressRequest;
 import com.smartvn.user_service.dto.address.AddressDTO;
 import com.smartvn.user_service.dto.auth.OtpVerificationRequest;
 import com.smartvn.user_service.dto.auth.RegisterRequest;
+import com.smartvn.user_service.dto.internal.UserInfoDTO;
+import com.smartvn.user_service.dto.response.ApiResponse;
 import com.smartvn.user_service.dto.user.UpdateUserRequest;
 import com.smartvn.user_service.dto.user.UserDTO;
 import com.smartvn.user_service.enums.UserRole;
@@ -18,6 +20,7 @@ import com.smartvn.user_service.service.otp.OtpService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -146,5 +149,18 @@ public class UserService implements IUserService {
         }
 
         return userDTO;
+    }
+
+    public UserInfoDTO getUserInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+
+        return new UserInfoDTO(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getImageUrl()
+        );
     }
 }

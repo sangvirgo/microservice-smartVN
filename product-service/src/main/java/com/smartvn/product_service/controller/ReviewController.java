@@ -1,5 +1,6 @@
 package com.smartvn.product_service.controller;
 
+import com.smartvn.product_service.dto.ReviewDTO;
 import com.smartvn.product_service.dto.ReviewRequest;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Review;
@@ -22,15 +23,15 @@ public class ReviewController {
      * API để lấy danh sách đánh giá của một sản phẩm (phân trang).
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<Review>>> getProductReviews(
+    public ResponseEntity<ApiResponse<Page<ReviewDTO>>> getProductReviews(
             @PathVariable Long productId,
             Pageable pageable) {
 
-        Page<Review> reviews = reviewService.getProductReviews(productId, pageable);
+        Page<ReviewDTO> reviews = reviewService.getProductReviews(productId, pageable);
 
-        ApiResponse<Page<Review>> response = ApiResponse.<Page<Review>>builder()
+        ApiResponse<Page<ReviewDTO>> response = ApiResponse.<Page<ReviewDTO>>builder()
                 .message("Reviews fetched successfully for product " + productId)
-                .result(reviews)
+                .data(reviews)
                 .build();
         return ResponseEntity.ok(response);
     }
@@ -49,7 +50,7 @@ public class ReviewController {
 
         ApiResponse<Review> response = ApiResponse.<Review>builder()
                 .message("Review created successfully.")
-                .result(newReview)
+                .data(newReview)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

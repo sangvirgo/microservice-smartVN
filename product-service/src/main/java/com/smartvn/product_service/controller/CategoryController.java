@@ -1,5 +1,6 @@
 package com.smartvn.product_service.controller;
 
+import com.smartvn.product_service.dto.CategoryDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Category;
 import com.smartvn.product_service.service.CategoryService;
@@ -21,12 +22,15 @@ public class CategoryController {
      * API để lấy tất cả danh mục.
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Category>>> getAllCategories() {
+    public ResponseEntity<ApiResponse<List<CategoryDTO>>> getAllCategories() {
         List<Category> categories = categoryService.getAllCategories();
+        List<CategoryDTO> categoryDTOs = categories.stream()
+                .map(CategoryDTO::new)
+                .toList();
 
-        ApiResponse<List<Category>> response = ApiResponse.<List<Category>>builder()
+        ApiResponse<List<CategoryDTO>> response = ApiResponse.<List<CategoryDTO>>builder()
                 .message("Categories fetched successfully.")
-                .result(categories)
+                .data(categoryDTOs)
                 .build();
         return ResponseEntity.ok(response);
     }
@@ -40,7 +44,7 @@ public class CategoryController {
 
         ApiResponse<Category> response = ApiResponse.<Category>builder()
                 .message("Category fetched successfully.")
-                .result(category)
+                .data(category)
                 .build();
         return ResponseEntity.ok(response);
     }
@@ -56,7 +60,7 @@ public class CategoryController {
 
         ApiResponse<Category> response = ApiResponse.<Category>builder()
                 .message("Category created successfully.")
-                .result(newCategory)
+                .data(newCategory)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

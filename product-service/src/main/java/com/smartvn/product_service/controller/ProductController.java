@@ -37,7 +37,7 @@ public class ProductController {
 
         ApiResponse<Page<ProductListingDTO>> response = ApiResponse.<Page<ProductListingDTO>>builder()
                 .message("Products fetched successfully.")
-                .result(productPage)
+                .data(productPage)
                 .build();
         return ResponseEntity.ok(response);
     }
@@ -56,7 +56,7 @@ public class ProductController {
 
         ApiResponse<ProductDetailDTO> response = ApiResponse.<ProductDetailDTO>builder()
                 .message("Product detail fetched successfully.")
-                .result(productDetail)
+                .data(productDetail)
                 .build();
         return ResponseEntity.ok(response);
     }

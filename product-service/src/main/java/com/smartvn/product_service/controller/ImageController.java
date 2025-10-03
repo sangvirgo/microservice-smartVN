@@ -29,7 +29,7 @@ public class ImageController {
 
         ApiResponse<Image> response = ApiResponse.<Image>builder()
                 .message("Image uploaded successfully.")
-                .result(savedImage)
+                .data(savedImage)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
