@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/images")
 @RequiredArgsConstructor
 public class ImageController {
 
@@ -38,7 +38,7 @@ public class ImageController {
      * API để xóa một hình ảnh.
      * Cần được bảo vệ (chỉ ADMIN).
      */
-    @DeleteMapping("/images/{imageId}")
+    @DeleteMapping("/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long imageId) {
         imageService.deleteImage(imageId);
 

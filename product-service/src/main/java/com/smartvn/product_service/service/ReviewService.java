@@ -59,10 +59,16 @@ public class ReviewService {
         try {
             log.debug("Fetching user info for userId: {}", review.getUserId());
             UserInfoDTO userInfo = userServiceClient.getUserInfo(review.getUserId());
-
-            dto.setUserFirstName(userInfo.getFirstName());
-            dto.setUserLastName(userInfo.getLastName());
-            dto.setUserAvatar(userInfo.getAvatar());
+            if (userInfo != null) { // <-- THÊM NULL CHECK
+                dto.setUserFirstName(userInfo.getFirstName());
+                dto.setUserLastName(userInfo.getLastName());
+                dto.setUserAvatar(userInfo.getAvatar());
+            } else {
+                // Đặt giá trị mặc định nếu userInfo là null
+                dto.setUserFirstName("Anonymous");
+                dto.setUserLastName("");
+                dto.setUserAvatar(null);
+            }
 
         } catch (Exception e) {
             log.error("Failed to fetch user info for userId: {}. Error: {}",

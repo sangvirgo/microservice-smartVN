@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class ReviewDTO {
     private Long id;
-    private String review;
+    private String reviewContent;
     private Long productId;
     private Long userId;
     private String userFirstName;
@@ -18,12 +18,10 @@ public class ReviewDTO {
 
     public ReviewDTO(Review review) {
         this.id = review.getId();
-        this.review = review.getReviewContent(); // ✅ FIX: Đổi từ getContent() -> getReviewContent()
+        this.reviewContent = review.getReviewContent(); // ✅ FIX: Đổi từ getContent() -> getReviewContent()
         this.productId = review.getProduct().getId();
         this.userId = review.getUserId();
         this.createdAt = review.getCreatedAt();
         this.rating = review.getRating();
-
-        // userFirstName, userLastName, userAvatar sẽ được set sau khi gọi UserService
     }
 }

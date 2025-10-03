@@ -5,35 +5,42 @@ spring:
   application:
     name: api-gateway
   config:
-    import: "optional:configserver:http://config-server:8888" # Should use bootstrap properties for this
+    import: "optional:configserver:http://config-server:8888"
   cloud:
     gateway:
       routes:
-        # === 1. User Service Routes (Auth and User Profiles) ===
+        # === 1. User Service Route ===
         - id: user-service-route
           uri: lb://user-service
           predicates:
             - Path=/api/v1/auth/**, /api/v1/users/**
           filters:
+            # Xóa /api/v1, gửi request đến /auth/** và /users/** tới user-service.
+            # Điều này là ĐÚNG vì các controller trong user-service không có prefix /api/v1.
             - StripPrefix=2
-            # AuthenticationFilter will be applied in code for /api/v1/users/**
+            # Filter sẽ tự động bỏ qua các đường dẫn public như /api/v1/auth/**
+            - AuthenticationGatewayFilterFactory
 
-        # === 2. Product Service Routes (Public Catalog) ===
-        - id: product-service-route
+        # === 2. Product Service Route (Đã gộp lại) ===
+        - id: product-service-route # <-- ID duy nhất
           uri: lb://product-service
           predicates:
-            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/review/**, /api/v1/images/**
+            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/images/**
+            # Ghi chú: /api/v1/reviews/** đã được bao gồm trong /api/v1/products/**
           filters:
-            - StripPrefix=2
+            # Giữ nguyên /api/v1 vì các controller trong product-service đều có prefix này.
+            - StripPrefix=0
+            # Filter sẽ tự phân biệt đâu là request public (GET) và private (POST, PUT, DELETE).
+            - AuthenticationGatewayFilterFactory
 
-        # === 3. Order Service Routes (Authenticated Users) ===
+        # === 3. Order Service Route ===
         - id: order-service-route
           uri: lb://order-service
           predicates:
             - Path=/api/v1/cart/**, /api/v1/orders/**, /api/v1/payment/**
           filters:
-            - StripPrefix=2
-            # AuthenticationFilter will be applied in code
+            - StripPrefix=2 # Giả sử các controller trong order-service không có /api/v1
+            - AuthenticationGatewayFilterFactory
 
         # === 4. Admin & Staff Routes ===
         - id: admin-service-route
@@ -41,8 +48,9 @@ spring:
           predicates:
             - Path=/api/v1/admin/**
           filters:
-            - StripPrefix=2
-            # AuthorizationFilter will be applied in code
+            - StripPrefix=2 # Giả sử admin-service controller không có /api/v1
+            - AuthenticationGatewayFilterFactory
+            # Trong tương lai, bạn sẽ cần thêm một filter phân quyền (Authorization) ở đây
 
 # Eureka Client
 eureka:
