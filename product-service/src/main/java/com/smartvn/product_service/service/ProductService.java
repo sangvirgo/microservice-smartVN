@@ -91,10 +91,6 @@ public class ProductService {
             BigDecimal maxDiscountedPrice = inventories.stream().map(Inventory::getDiscountedPrice).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
             int totalStock = inventories.stream().mapToInt(Inventory::getQuantity).sum();
 
-            dto.setMinPrice(minPrice);
-            dto.setMaxPrice(maxPrice);
-            dto.setMinDiscountedPrice(minDiscountedPrice);
-            dto.setMaxDiscountedPrice(maxDiscountedPrice);
             dto.setPriceRange(formatPriceRange(minPrice, maxPrice));
             dto.setDiscountedPriceRange(formatPriceRange(minDiscountedPrice, maxDiscountedPrice));
             dto.setInStock(totalStock > 0);
@@ -105,7 +101,32 @@ public class ProductService {
 
     private ProductDetailDTO mapProductToDetailDTO(Product product) {
         ProductDetailDTO dto = new ProductDetailDTO();
-        // ... (sao chép các trường từ product sang dto như cũ)
+        dto.setId(product.getId());
+        dto.setTitle(product.getTitle());
+        dto.setBrand(product.getBrand());
+        dto.setDescription(product.getDescription());
+        dto.setDetailedReview(product.getDetailedReview());
+        dto.setPowerfulPerformance(product.getPowerfulPerformance());
+        dto.setColor(product.getColor());
+        dto.setWeight(product.getWeight());
+        dto.setDimension(product.getDimension());
+        dto.setBatteryType(product.getBatteryType());
+        dto.setBatteryCapacity(product.getBatteryCapacity());
+        dto.setRamCapacity(product.getRamCapacity());
+        dto.setRomCapacity(product.getRomCapacity());
+        dto.setScreenSize(product.getScreenSize());
+        dto.setConnectionPort(product.getConnectionPort());
+        if (product.getImages() != null) {
+            dto.setImageUrls(product.getImages().stream().map(com.smartvn.product_service.model.Image::getDownloadUrl).collect(Collectors.toList()));
+        }
+        if (product.getCategory() != null) {
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+        }
+        dto.setAverageRating(product.getAverageRating());
+        dto.setNumRatings(product.getNumRatings());
+        dto.setQuantitySold(product.getQuantitySold());
+        dto.setIsActive(product.getIsActive());
         return dto;
     }
 

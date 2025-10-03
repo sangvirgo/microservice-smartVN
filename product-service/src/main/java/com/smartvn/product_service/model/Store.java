@@ -32,7 +32,7 @@ public class Store {
     @Column(length = 250)
     private String address;
 
-    @OneToMany(mappedBy = "storeId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Inventory> inventories;
 
     @CreationTimestamp

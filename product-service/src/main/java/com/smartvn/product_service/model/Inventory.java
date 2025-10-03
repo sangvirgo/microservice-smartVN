@@ -69,4 +69,8 @@ public class Inventory {
             this.discountedPrice = price;
         }
     }
+
+    public Long getStoreId() {
+        return store != null ? store.getId() : null;
+    }
 }

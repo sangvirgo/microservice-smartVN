@@ -114,18 +114,6 @@ public class Product {
     private LocalDateTime updatedAt;
 
     // ============================================
-    // TRANSIENT FIELDS
-    // ============================================
-
-    /**
-     * Chi tiết đầy đủ về giá theo size/store
-     * Load từ Inventory Service khi xem chi tiết sản phẩm
-     */
-    @Transient
-    private List<InventoryInfo> inventoryDetails;
-
-
-    // ============================================
     // INNER CLASS
     // ============================================
 
