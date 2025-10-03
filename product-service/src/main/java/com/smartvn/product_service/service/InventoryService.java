@@ -32,10 +32,6 @@ public class InventoryService {
         Inventory inventory = inventoryRepository.findById(inventoryId).orElseThrow(() -> new RuntimeException("Inventory not found"));
         inventory.setPrice(price);
         inventory.setDiscountPercent(discount);
-        // Recalculate discounted price
-        BigDecimal discountDecimal = new BigDecimal(discount).divide(new BigDecimal(100));
-        BigDecimal discountedPrice = price.subtract(price.multiply(discountDecimal));
-        inventory.setDiscountedPrice(discountedPrice);
         inventoryRepository.save(inventory);
     }
 }

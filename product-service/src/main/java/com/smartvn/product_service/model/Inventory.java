@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Entity
@@ -62,9 +63,9 @@ public class Inventory {
     @PrePersist
     @PreUpdate
     public void calculateDiscountedPrice() {
-        if (price != null && discountPercent != null) {
+        if (price != null && discountPercent != null && discountPercent > 0) {
             BigDecimal discount = price.multiply(BigDecimal.valueOf(discountPercent / 100.0));
-            this.discountedPrice = price.subtract(discount);
+            this.discountedPrice = price.subtract(discount).setScale(0, RoundingMode.HALF_UP);
         } else if (price != null) {
             this.discountedPrice = price;
         }

@@ -30,6 +30,10 @@ public class ReviewService {
 
     @Transactional
     public Review createReview(Long userId, Long productId, ReviewRequest reviewRequest) {
+        if (reviewRepository.findByProductIdAndUserId(productId, userId).isPresent()) {
+            throw new AppException("You have already reviewed this product.", HttpStatus.BAD_REQUEST);
+        }
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException("Product not found with id: " + productId, HttpStatus.NOT_FOUND));
 
@@ -38,7 +42,7 @@ public class ReviewService {
         review.setProduct(product);
         review.setRating(reviewRequest.getRating());
         review.setReviewContent(reviewRequest.getContent());
-        review.setStatus("PENDING");
+        review.setStatus("APPROVED"); // Auto-approve for now
 
         Review savedReview = reviewRepository.save(review);
         log.info("Created a new review with id {} for product {}", savedReview.getId(), productId);
