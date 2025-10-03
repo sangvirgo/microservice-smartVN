@@ -1,0 +1,41 @@
+package com.smartvn.product_service.service;
+
+import com.smartvn.product_service.model.Inventory;
+import com.smartvn.product_service.repository.InventoryRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class InventoryService {
+
+    private final InventoryRepository inventoryRepository;
+
+    public List<Inventory> getInventoriesByProduct(Long productId) {
+        return inventoryRepository.findAllByProductId(productId);
+    }
+
+    public List<Inventory> getInventoryByProductAndStore(Long productId, Long storeId) {
+        return inventoryRepository.findByProductIdAndStoreId(productId, storeId);
+    }
+
+    public void updateInventoryQuantity(Long inventoryId, Integer quantity) {
+        Inventory inventory = inventoryRepository.findById(inventoryId).orElseThrow(() -> new RuntimeException("Inventory not found"));
+        inventory.setQuantity(quantity);
+        inventoryRepository.save(inventory);
+    }
+
+    public void updateInventoryPrice(Long inventoryId, BigDecimal price, Integer discount) {
+        Inventory inventory = inventoryRepository.findById(inventoryId).orElseThrow(() -> new RuntimeException("Inventory not found"));
+        inventory.setPrice(price);
+        inventory.setDiscountPercent(discount);
+        // Recalculate discounted price
+        BigDecimal discountDecimal = new BigDecimal(discount).divide(new BigDecimal(100));
+        BigDecimal discountedPrice = price.subtract(price.multiply(discountDecimal));
+        inventory.setDiscountedPrice(discountedPrice);
+        inventoryRepository.save(inventory);
+    }
+}

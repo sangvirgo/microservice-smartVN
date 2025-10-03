@@ -87,32 +87,14 @@ public class ProductDetailDTO {
     @AllArgsConstructor
     public static class PriceVariantDTO {
         private Long inventoryId;
-
-        // Store info
         private Long storeId;
         private String storeName;
-        private Double distanceKm; // Khoảng cách từ vị trí user
-
-        // Variant info
-        private String size; // "128GB", "256GB", "512GB"
-        private String displayName; // "iPhone 15 Pro 128GB"
-
-        // Price info
+        private String size;
         private BigDecimal price;
         private Integer discountPercent;
         private BigDecimal discountedPrice;
-        private String formattedPrice; // "25.000.000đ"
-        private String formattedDiscountedPrice; // "23.000.000đ"
-
-        // Stock info
         private Integer quantity;
         private Boolean inStock;
-        private String stockStatus; // "Còn hàng", "Sắp hết", "Hết hàng"
-
-        // Badges
-        private Boolean isRecommended; // Cửa hàng gần nhất
-        private Boolean isBestPrice; // Giá tốt nhất
-        private Boolean hasDiscount; // Đang giảm giá
     }
 
     @Getter

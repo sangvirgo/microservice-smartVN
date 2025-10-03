@@ -73,64 +73,6 @@ public class Product {
     private String description;
 
     // ============================================
-    // GIẢI PHÁP: HIỂN THỊ KHOẢNG GIÁ (PRICE RANGE)
-    // ============================================
-
-    /**
-     * Giá THẤP NHẤT trong tất cả các size/store
-     * Ví dụ: "Từ 24.500.000đ"
-     * Được sync từ Inventory Service
-     */
-    @Column(name = "min_price", precision = 19, scale = 2)
-    private BigDecimal minPrice;
-
-    /**
-     * Giá CAO NHẤT trong tất cả các size/store
-     * Dùng để hiển thị range: "24.500.000đ - 35.000.000đ"
-     */
-    @Column(name = "max_price", precision = 19, scale = 2)
-    private BigDecimal maxPrice;
-
-    /**
-     * Giá sau giảm giá THẤP NHẤT
-     * Dùng để highlight deal tốt nhất
-     */
-    @Column(name = "min_discounted_price", precision = 19, scale = 2)
-    private BigDecimal minDiscountedPrice;
-
-    /**
-     * Giá sau giảm giá CAO NHẤT
-     */
-    @Column(name = "max_discounted_price", precision = 19, scale = 2)
-    private BigDecimal maxDiscountedPrice;
-
-    /**
-     * Flag để biết có đang giảm giá không
-     * Dùng để hiển thị badge "SALE"
-     */
-    @Column(name = "has_discount", nullable = false)
-    private Boolean hasDiscount = false;
-
-    /**
-     * Phần trăm giảm giá tối đa
-     * Ví dụ: "Giảm đến 20%"
-     */
-    @Column(name = "max_discount_percent")
-    private Integer maxDiscountPercent = 0;
-
-    // ============================================
-    // TỒN KHO TỔNG (Để hiển thị "Còn hàng / Hết hàng")
-    // ============================================
-
-    /**
-     * Tổng số lượng tồn kho trong TẤT CẢ các store/size
-     * Chỉ dùng để check "Còn hàng" hay không
-     * KHÔNG dùng cho business logic
-     */
-    @Column(name = "total_stock", nullable = false)
-    private Integer totalStock = 0;
-
-    // ============================================
     // THỐNG KÊ
     // ============================================
 
@@ -182,25 +124,6 @@ public class Product {
     @Transient
     private List<InventoryInfo> inventoryDetails;
 
-    /**
-     * Helper method để hiển thị giá trên UI
-     */
-    @Transient
-    public String getPriceDisplay() {
-        if (minPrice == null) return "Liên hệ";
-
-        if (hasDiscount && minDiscountedPrice != null) {
-            if (minDiscountedPrice.compareTo(maxDiscountedPrice) == 0) {
-                return String.format("%,.0fđ", minDiscountedPrice);
-            }
-            return String.format("%,.0fđ - %,.0fđ", minDiscountedPrice, maxDiscountedPrice);
-        }
-
-        if (minPrice.compareTo(maxPrice) == 0) {
-            return String.format("%,.0fđ", minPrice);
-        }
-        return String.format("%,.0fđ - %,.0fđ", minPrice, maxPrice);
-    }
 
     // ============================================
     // INNER CLASS
