@@ -94,6 +94,11 @@ public class ProductService {
             dto.setPriceRange(formatPriceRange(minPrice, maxPrice));
             dto.setDiscountedPriceRange(formatPriceRange(minDiscountedPrice, maxDiscountedPrice));
             dto.setInStock(totalStock > 0);
+        } else {
+            // ⚠️ Nên set giá trị mặc định
+            dto.setInStock(false);
+            dto.setPriceRange("N/A");
+            dto.setDiscountedPriceRange("N/A");
         }
 
         return dto;

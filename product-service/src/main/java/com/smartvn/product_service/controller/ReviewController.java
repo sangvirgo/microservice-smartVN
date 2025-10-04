@@ -5,6 +5,7 @@ import com.smartvn.product_service.dto.ReviewRequest;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Review;
 import com.smartvn.product_service.service.ReviewService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,8 +44,8 @@ public class ReviewController {
     @PostMapping
     public ResponseEntity<ApiResponse<Review>> createReview(
             @PathVariable Long productId,
-            @RequestBody ReviewRequest reviewRequest,
-            @RequestHeader("X-User-Id") Long userId) { // Giả sử User ID được truyền qua header từ API Gateway
+            @RequestBody @Valid ReviewRequest reviewRequest,  // ✅ Thêm @Valid để validate
+            @RequestHeader(value = "X-User-Id", required = true) Long userId) {  // ✅ Đổi tên biến
 
         Review newReview = reviewService.createReview(userId, productId, reviewRequest);
 

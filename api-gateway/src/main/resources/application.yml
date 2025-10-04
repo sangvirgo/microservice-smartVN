@@ -32,7 +32,7 @@ spring:
         - id: product-service-route
           uri: lb://product-service
           predicates:
-            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/images/**
+            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/images/**, /api/v1/reviews/**
           filters:
             - StripPrefix=0
             - Authentication
