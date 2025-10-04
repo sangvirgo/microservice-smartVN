@@ -74,6 +74,15 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             return true;
         }
 
+            // OAuth2 endpoints - QUAN TRỌNG
+        if (path.startsWith("/oauth2/")) {
+            return true;
+        }
+        
+        if (path.startsWith("/login/oauth2/")) {
+            return true;
+        }
+
         // Products, categories, reviews - chỉ GET
         if (path.startsWith("/api/v1/products") && HttpMethod.GET.equals(method)) {
             return true;

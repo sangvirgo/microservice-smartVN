@@ -11,6 +11,14 @@ spring:
   cloud:
     gateway:
       routes:  # ← KHÔNG phải server.webflux.routes
+# === OAuth2 Route (ƯU TIÊN CAO NHẤT) ===
+        - id: oauth2-route
+          uri: lb://user-service
+          predicates:
+            - Path=/oauth2/**, /login/oauth2/**
+          filters:
+            - StripPrefix=0
+
         # === 1. User Service Route ===
         - id: user-service-route
           uri: lb://user-service

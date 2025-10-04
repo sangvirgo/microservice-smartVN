@@ -78,19 +78,18 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
             throw new OAuth2AuthenticationException(error, "Email not found from OAuth2 provider");
         }
 
+        // Tìm user, nếu không có thì tạo mới
         User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+                .orElseGet(() -> {
+                    log.info("User not found, creating new user from OAuth2 provider {}: {}", provider, email);
+                    return createUser(oauth2User.getAttributes(), email, provider);
+                });
 
-        if (user == null) {
-            user = this.createUser(oauth2User.getAttributes(), email, provider);
-            log.info("Created new user from OAuth2 provider {}: {}", provider, email);
-        } else {
-            log.info("Existing user logged in via OAuth2 provider {}: {}", provider, email);
-            if (!user.isActive()) {
-                user.setActive(true);
-                userRepository.save(user);
-                log.info("Activated existing inactive user: {}", email);
-            }
+        // Kích hoạt user nếu đang inactive
+        if (!user.isActive()) {
+            user.setActive(true);
+            userRepository.save(user);
+            log.info("Activated existing inactive user: {}", email);
         }
 
         return AppUserDetails.buildUserDetails(user);

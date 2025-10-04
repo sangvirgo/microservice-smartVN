@@ -80,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 apiPrefix + "/auth/**",
                                 "/oauth2/**",
+                                "/login/oauth2/**",
                                 "/actuator/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**"
