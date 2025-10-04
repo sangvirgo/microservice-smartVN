@@ -4,34 +4,30 @@ server:
 spring:
   application:
     name: api-gateway
+  main:
+    web-application-type: reactive
   config:
     import: "optional:configserver:http://config-server:8888"
   cloud:
     gateway:
-      routes:
+      routes:  # ← KHÔNG phải server.webflux.routes
         # === 1. User Service Route ===
         - id: user-service-route
           uri: lb://user-service
           predicates:
             - Path=/api/v1/auth/**, /api/v1/users/**
           filters:
-            # Xóa /api/v1, gửi request đến /auth/** và /users/** tới user-service.
-            # Điều này là ĐÚNG vì các controller trong user-service không có prefix /api/v1.
-            - StripPrefix=2
-            # Filter sẽ tự động bỏ qua các đường dẫn public như /api/v1/auth/**
-            - AuthenticationGatewayFilterFactory
+            - StripPrefix=0
+            - Authentication
 
-        # === 2. Product Service Route (Đã gộp lại) ===
-        - id: product-service-route # <-- ID duy nhất
+        # === 2. Product Service Route ===
+        - id: product-service-route
           uri: lb://product-service
           predicates:
             - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/images/**
-            # Ghi chú: /api/v1/reviews/** đã được bao gồm trong /api/v1/products/**
           filters:
-            # Giữ nguyên /api/v1 vì các controller trong product-service đều có prefix này.
             - StripPrefix=0
-            # Filter sẽ tự phân biệt đâu là request public (GET) và private (POST, PUT, DELETE).
-            - AuthenticationGatewayFilterFactory
+            - Authentication
 
         # === 3. Order Service Route ===
         - id: order-service-route
@@ -39,21 +35,42 @@ spring:
           predicates:
             - Path=/api/v1/cart/**, /api/v1/orders/**, /api/v1/payment/**
           filters:
-            - StripPrefix=2 # Giả sử các controller trong order-service không có /api/v1
-            - AuthenticationGatewayFilterFactory
+            - StripPrefix=0  # ← Sửa từ 2 thành 0
+            - Authentication
 
-        # === 4. Admin & Staff Routes ===
+        # === 4. Admin Service Route ===
         - id: admin-service-route
           uri: lb://admin-service
           predicates:
             - Path=/api/v1/admin/**
           filters:
-            - StripPrefix=2 # Giả sử admin-service controller không có /api/v1
-            - AuthenticationGatewayFilterFactory
-            # Trong tương lai, bạn sẽ cần thêm một filter phân quyền (Authorization) ở đây
+            - StripPrefix=0  # ← Sửa từ 2 thành 0
+            - Authentication
 
-# Eureka Client
+      globalcors:  # ← CẤP CÙNG VỚI routes, KHÔNG phải trong webflux
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:5173"
+              - "http://localhost:5174"
+              - "http://localhost:5175"
+              - "https://*.vercel.app"
+            allowed-methods:
+              - "GET"
+              - "POST"
+              - "PUT"
+              - "DELETE"
+              - "PATCH"
+              - "OPTIONS"
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+
 eureka:
   client:
     service-url:
       defaultZone: http://discovery-service:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true

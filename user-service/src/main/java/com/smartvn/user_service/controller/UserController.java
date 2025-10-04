@@ -25,7 +25,7 @@ import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/users")
+@RequestMapping("${api.prefix}/users")
 @Slf4j
 public class UserController {
 

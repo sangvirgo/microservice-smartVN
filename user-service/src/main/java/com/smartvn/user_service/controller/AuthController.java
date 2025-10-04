@@ -34,11 +34,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-//@RequestMapping("${api.prefix}/auth")
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/auth")
+@RequestMapping("${api.prefix}/auth")
 public class AuthController {
     private final JwtUtils jwtUtils;
     private final CookieUtils cookieUtils;

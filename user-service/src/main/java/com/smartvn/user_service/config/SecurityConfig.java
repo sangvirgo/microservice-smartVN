@@ -26,25 +26,24 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.util.List;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityConfig {
-//    @Value("${api.prefix}")
-//    private String API;
+
+    @Value("${api.prefix}")
+    private String apiPrefix;
 
     private final AppUserDetailsService userDetailsService;
     private final JwtEntryPoint authEntryPoint;
     private final AuthTokenFilter authTokenFilter;
+    private final ApiKeyAuthFilter apiKeyAuthFilter;
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final ErrorResponseUtils errorResponseUtils;
     private final PasswordEncoder passwordEncoder;
-    // Đã xóa CloudflareFilter và RateLimitFilter khỏi đây
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
@@ -63,14 +62,11 @@ public class SecurityConfig {
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) ->
                 errorResponseUtils.sendAccessDeniedError(response,
-                "You do not have permission to access this resource.");
+                        "You do not have permission to access this resource.");
     }
-
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        List<String> securedUrls = List.of("/cart/**", "/cartItems/**", "/orders/**");
-
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exception -> exception
@@ -78,14 +74,43 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler()))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                .authorizeHttpRequests(auth -> auth
+                        // Public endpoints
+                        .requestMatchers(
+                                apiPrefix + "/auth/**",
+                                "/oauth2/**",
+                                "/actuator/health",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**"
+                        ).permitAll()
+
+                        // Internal API - protected by ApiKeyAuthFilter
+                        .requestMatchers(apiPrefix + "/internal/**").permitAll()
+
+                        // User endpoints
+                        .requestMatchers(apiPrefix + "/users/**").authenticated()
+
+                        // Admin endpoints
+                        .requestMatchers(apiPrefix + "/admin/**").hasRole("ADMIN")
+
+                        // All other requests require authentication
+                        .anyRequest().authenticated()
+                )
+
                 .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/oauth2/authorization/{registrationId}")
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/oauth2/callback/*"))
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(oAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler))
+                        .failureHandler(oAuth2FailureHandler)
+                )
                 .authenticationProvider(authenticationProvider())
-                // Đã xóa 2 dòng addFilterBefore cho CloudflareFilter và RateLimitFilter
+                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }

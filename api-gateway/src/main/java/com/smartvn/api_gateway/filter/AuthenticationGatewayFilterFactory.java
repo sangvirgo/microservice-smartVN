@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -64,16 +65,35 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
         return exchange.getResponse().setComplete();
     }
 
-    // Hàm này giúp chúng ta không cần tạo nhiều route khác nhau cho public và private
     private boolean isPublicPath(ServerHttpRequest request) {
         String path = request.getURI().getPath();
-        return path.startsWith("/api/v1/auth/") ||
-                (path.startsWith("/api/v1/products") && request.getMethod().matches("GET")) ||
-                (path.startsWith("/api/v1/categories") && request.getMethod().matches("GET")) ||
-                (path.startsWith("/api/v1/reviews") && request.getMethod().matches("GET")) ||
-                path.startsWith("/actuator/health");
-    }
+        HttpMethod method = request.getMethod();
 
+        // Auth endpoints - tất cả methods
+        if (path.startsWith("/api/v1/auth/")) {
+            return true;
+        }
+
+        // Products, categories, reviews - chỉ GET
+        if (path.startsWith("/api/v1/products") && HttpMethod.GET.equals(method)) {
+            return true;
+        }
+
+        if (path.startsWith("/api/v1/categories") && HttpMethod.GET.equals(method)) {
+            return true;
+        }
+
+        if (path.startsWith("/api/v1/reviews") && HttpMethod.GET.equals(method)) {
+            return true;
+        }
+
+        // Health check
+        if (path.startsWith("/actuator/health")) {
+            return true;
+        }
+
+        return false;
+    }
 
     public static class Config {
         // Cấu hình (nếu cần)
