@@ -29,23 +29,76 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final StoreService storeService;
-
+    private final CategoryRepository categoryRepository;
     private final InventoryRepository inventoryRepository;
     private final ImageRepository imageRepository;
-    private final CategoryRepository categoryRepository;
 
+    /**
+     * Tìm kiếm sản phẩm với khả năng lọc theo tên category (level 1 hoặc level 2)
+     */
     public Page<ProductListingDTO> searchProducts(
             String keyword,
-            Long categoryId,
+            String topLevelCategory,
+            String secondLevelCategory,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Pageable pageable
     ) {
-        log.info("Searching products with keyword: {}, categoryId: {}, minPrice: {}, maxPrice: {}",
-                keyword, categoryId, minPrice, maxPrice);
+        log.info("Searching products - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
+                keyword, topLevelCategory, secondLevelCategory, minPrice, maxPrice);
+
+        // Xác định categoryId dựa trên tên category
+        Long categoryId = resolveCategoryId(topLevelCategory, secondLevelCategory);
+
+        if (categoryId == null && (topLevelCategory != null || secondLevelCategory != null)) {
+            log.warn("⚠️ Category not found for topLevel: {}, secondLevel: {}",
+                    topLevelCategory, secondLevelCategory);
+            // Trả về page rỗng nếu category không tồn tại
+            return Page.empty(pageable);
+        }
+
         return productRepository.searchProducts(
                 keyword, categoryId, minPrice, maxPrice, pageable
         ).map(this::toListingDTO);
+    }
+
+    /**
+     * Resolve categoryId từ tên category
+     * Logic:
+     * 1. Nếu có secondLevelCategory -> tìm category cấp 2 với tên đó
+     * 2. Nếu chỉ có topLevelCategory -> tìm category cấp 1 với tên đó
+     * 3. Nếu không có cả hai -> return null (không filter theo category)
+     */
+    private Long resolveCategoryId(String topLevelCategory, String secondLevelCategory) {
+        // Ưu tiên secondLevelCategory nếu có
+        if (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty()) {
+            return categoryRepository.findByName(secondLevelCategory.trim())
+                    .filter(cat -> cat.getLevel() == 2) // Đảm bảo là level 2
+                    .map(Category::getId)
+                    .orElseGet(() -> {
+                        log.warn("Second-level category '{}' not found", secondLevelCategory);
+                        return null;
+                    });
+        }
+
+        // Nếu chỉ có topLevelCategory
+        if (topLevelCategory != null && !topLevelCategory.trim().isEmpty()) {
+            Category topCategory = categoryRepository.findByName(topLevelCategory.trim())
+                    .filter(cat -> cat.getLevel() == 1)
+                    .orElse(null);
+
+            if (topCategory == null) {
+                log.warn("Top-level category '{}' not found", topLevelCategory);
+                return null;
+            }
+
+            // Nếu là category level 1, trả về tất cả sản phẩm thuộc category đó và các sub-categories
+            // Để làm điều này, bạn cần modify query hoặc lấy tất cả sub-category IDs
+            // Hiện tại, tạm trả về ID của category level 1
+            return topCategory.getId();
+        }
+
+        return null; // Không filter theo category
     }
 
     public ProductDetailDTO getProductDetail(Long productId) {
@@ -60,7 +113,6 @@ public class ProductService {
             ProductDetailDTO.PriceVariantDTO variantDTO = new ProductDetailDTO.PriceVariantDTO();
             variantDTO.setInventoryId(inventory.getId());
             variantDTO.setStoreId(inventory.getStoreId());
-            // Lấy tên cửa hàng
             Store store = storeService.getStoreById(inventory.getStoreId());
             variantDTO.setStoreName(store.getName());
             variantDTO.setSize(inventory.getSize());
@@ -102,7 +154,6 @@ public class ProductService {
             dto.setDiscountedPriceRange(formatPriceRange(minDiscountedPrice, maxDiscountedPrice));
             dto.setInStock(totalStock > 0);
         } else {
-            // ⚠️ Nên set giá trị mặc định
             dto.setInStock(false);
             dto.setPriceRange("N/A");
             dto.setDiscountedPriceRange("N/A");
@@ -129,7 +180,7 @@ public class ProductService {
         dto.setScreenSize(product.getScreenSize());
         dto.setConnectionPort(product.getConnectionPort());
         if (product.getImages() != null) {
-            dto.setImageUrls(product.getImages().stream().map(com.smartvn.product_service.model.Image::getDownloadUrl).collect(Collectors.toList()));
+            dto.setImageUrls(product.getImages().stream().map(Image::getDownloadUrl).collect(Collectors.toList()));
         }
         if (product.getCategory() != null) {
             dto.setCategoryId(product.getCategory().getId());
@@ -152,7 +203,6 @@ public class ProductService {
         return String.format("%,.0fđ - %,.0fđ", min, max);
     }
 
-
     @Transactional
     public List<Product> createBulkProducts(List<BulkProductRequest.ProductItemDTO> productItems) {
         List<Product> createdProducts = new ArrayList<>();
@@ -164,7 +214,6 @@ public class ProductService {
                 log.info("✅ Successfully created product: {} (ID: {})", product.getTitle(), product.getId());
             } catch (Exception e) {
                 log.error("❌ Failed to create product '{}'. Error: {}", item.getTitle(), e.getMessage(), e);
-                // Tiếp tục với sản phẩm tiếp theo
             }
         }
 
@@ -175,10 +224,8 @@ public class ProductService {
     }
 
     private Product createProductFromDTO(BulkProductRequest.ProductItemDTO dto) {
-        // 1️⃣ Tìm/Tạo Category
         Category category = getOrCreateCategory(dto.getTopLevelCategory(), dto.getSecondLevelCategory());
 
-        // 2️⃣ Tạo Product
         Product product = new Product();
         product.setTitle(dto.getTitle());
         product.setBrand(dto.getBrand());
@@ -203,7 +250,6 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // 3️⃣ Tạo Images
         if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
             for (BulkProductRequest.ImageUrlDTO imgDto : dto.getImageUrls()) {
                 Image image = new Image();
@@ -215,7 +261,6 @@ public class ProductService {
             }
         }
 
-        // 4️⃣ Tạo Inventory cho từng variant (size)
         if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
             Store store = storeService.getStoreById(dto.getStoreId());
 
@@ -227,7 +272,6 @@ public class ProductService {
                 inventory.setQuantity(variantDto.getQuantity());
                 inventory.setPrice(variantDto.getPrice());
                 inventory.setDiscountPercent(variantDto.getDiscountPercent() != null ? variantDto.getDiscountPercent() : 0);
-                // discountedPrice sẽ tự động tính trong @PrePersist của Inventory entity
                 inventoryRepository.save(inventory);
             }
         }
@@ -236,7 +280,6 @@ public class ProductService {
     }
 
     private Category getOrCreateCategory(String topLevelName, String secondLevelName) {
-        // Tìm hoặc tạo parent category (level 1)
         Category parentCategory = categoryRepository.findByName(topLevelName)
                 .orElseGet(() -> {
                     Category newParent = new Category();
@@ -248,7 +291,6 @@ public class ProductService {
                     return saved;
                 });
 
-        // Tìm hoặc tạo child category (level 2)
         Category childCategory = categoryRepository.findByName(secondLevelName)
                 .orElseGet(() -> {
                     Category newChild = new Category();
