@@ -17,8 +17,7 @@ import java.util.List;
 @Table(name = "products", indexes = {
         @Index(name = "idx_category", columnList = "category_id"),
         @Index(name = "idx_is_active", columnList = "is_active"),
-        @Index(name = "idx_title", columnList = "title"),
-        @Index(name = "idx_price_range", columnList = "min_price, max_price")
+        @Index(name = "idx_title", columnList = "title")
 })
 @Getter
 @Setter

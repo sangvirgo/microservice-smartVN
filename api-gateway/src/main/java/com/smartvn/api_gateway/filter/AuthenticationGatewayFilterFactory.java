@@ -83,6 +83,10 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             return true;
         }
 
+        if (path.equals("/api/v1/products/create-multiple") && HttpMethod.POST.equals(method)) {
+            return true;
+        }
+
         // Products, categories, reviews - chỉ GET
         if (path.startsWith("/api/v1/products") && HttpMethod.GET.equals(method)) {
             return true;
