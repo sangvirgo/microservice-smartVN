@@ -16,5 +16,5 @@ public class ReviewRequest {
     private Integer rating;
 
     @Size(max = 500, message = "Content must be less than 500 characters")
-    private String content;
+    private String reviewContent;
 }

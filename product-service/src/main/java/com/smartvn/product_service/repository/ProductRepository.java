@@ -37,7 +37,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             "  :maxPrice IS NULL OR EXISTS (" +
             "    SELECT 1 FROM inventory i WHERE i.product_id = p.id AND i.discounted_price <= :maxPrice" +
             "  )" +
-            ")",
+            ") " +
+            "ORDER BY p.quantity_sold DESC",
             countQuery = "SELECT count(DISTINCT p.id) FROM products p " +
                     "WHERE p.is_active = true " +
                     "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +

@@ -41,7 +41,7 @@ public class ReviewService {
         review.setUserId(userId);
         review.setProduct(product);
         review.setRating(reviewRequest.getRating());
-        review.setReviewContent(reviewRequest.getContent());
+        review.setReviewContent(reviewRequest.getReviewContent());
         review.setStatus("APPROVED"); // Auto-approve for now
 
         Review savedReview = reviewRepository.save(review);

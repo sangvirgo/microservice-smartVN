@@ -41,7 +41,7 @@ public class Product {
     @Column(length = 50)
     private String weight;
 
-    @Column(length = 50)
+    @Column(length = 100)
     private String dimension;
 
     @Column(name = "battery_type", length = 50)
