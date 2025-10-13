@@ -18,10 +18,6 @@ public class InventoryService {
         return inventoryRepository.findAllByProductId(productId);
     }
 
-    public List<Inventory> getInventoryByProductAndStore(Long productId, Long storeId) {
-        return inventoryRepository.findByProductIdAndStoreId(productId, storeId);
-    }
-
     public void updateInventoryQuantity(Long inventoryId, Integer quantity) {
         Inventory inventory = inventoryRepository.findById(inventoryId).orElseThrow(() -> new RuntimeException("Inventory not found"));
         inventory.setQuantity(quantity);

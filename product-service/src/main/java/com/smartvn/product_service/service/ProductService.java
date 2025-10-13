@@ -29,7 +29,6 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
-    private final StoreService storeService;
     private final CategoryRepository categoryRepository;
     private final InventoryRepository inventoryRepository;
     private final ImageRepository imageRepository;
@@ -292,12 +291,9 @@ public class ProductService {
         }
 
         if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
-            Store store = storeService.getStoreById(dto.getStoreId());
-
             for (BulkProductRequest.InventoryItemDTO variantDto : dto.getVariants()) {
                 Inventory inventory = new Inventory();
                 inventory.setProduct(savedProduct);
-                inventory.setStore(store);
                 inventory.setSize(variantDto.getSize());
                 inventory.setQuantity(variantDto.getQuantity());
                 inventory.setPrice(variantDto.getPrice());
