@@ -8,7 +8,6 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,6 +103,9 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Inventory> inventories = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -113,22 +115,20 @@ public class Product {
     private LocalDateTime updatedAt;
 
     // ============================================
-    // INNER CLASS
+    // HELPER METHODS
     // ============================================
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class InventoryInfo {
-        private Long inventoryId;
-        private Long storeId;
-        private String storeName;
-        private String size;
-        private Integer quantity;
-        private BigDecimal price;
-        private Integer discountPercent;
-        private BigDecimal discountedPrice;
-        private Boolean inStock;
+    /**
+     * Kiểm tra sản phẩm có còn hàng không (bất kỳ size nào)
+     */
+    public boolean hasStock() {
+        return inventories.stream().anyMatch(inv -> inv.getQuantity() > 0);
+    }
+
+    /**
+     * Lấy số lượng variants
+     */
+    public int getVariantCount() {
+        return inventories != null ? inventories.size() : 0;
     }
 }

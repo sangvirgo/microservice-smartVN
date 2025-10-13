@@ -33,8 +33,6 @@ public class BulkProductRequest {
         // === IMAGES ===
         private List<ImageUrlDTO> imageUrls;
 
-        // === INVENTORY (Giá & Kho) ===
-        private Long storeId;              // ID cửa hàng (bắt buộc)
         private List<InventoryItemDTO> variants; // Các phiên bản size khác nhau
     }
 

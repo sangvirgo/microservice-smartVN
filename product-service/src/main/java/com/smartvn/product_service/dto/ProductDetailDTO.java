@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * DTO cho CHI TIẾT sản phẩm (Product Detail Page)
- * Chứa đầy đủ thông tin bao gồm giá theo từng size/store
+ * ✅ SINGLE STORE VERSION - Không còn thông tin store
  */
 @Getter
 @Setter
@@ -43,43 +43,20 @@ public class ProductDetailDTO {
     private Long categoryId;
     private String categoryName;
 
-    // ============================================
-    // GIÁ THEO SIZE/STORE - Chi tiết đầy đủ
-    // ============================================
-
     /**
-     * Danh sách giá theo từng phiên bản (size) và cửa hàng
-     * Được load từ Inventory Service
+     * Danh sách các phiên bản (size) với giá khác nhau
      */
     private List<PriceVariantDTO> priceVariants;
-
-    /**
-     * Cửa hàng được đề xuất (gần nhất với user)
-     */
-    private Long recommendedStoreId;
-    private String recommendedStoreName;
-
-    // ============================================
-    // REVIEWS
-    // ============================================
 
     private Double averageRating;
     private Integer numRatings;
     private List<ReviewSummaryDTO> recentReviews;
 
-    // ============================================
-    // THỐNG KÊ
-    // ============================================
-
     private Long quantitySold;
     private Boolean isActive;
 
-    // ============================================
-    // INNER CLASSES
-    // ============================================
-
     /**
-     * Thông tin giá của MỘT phiên bản (size) tại MỘT cửa hàng
+     * Thông tin giá của MỘT phiên bản (size)
      */
     @Getter
     @Setter
@@ -87,14 +64,12 @@ public class ProductDetailDTO {
     @AllArgsConstructor
     public static class PriceVariantDTO {
         private Long inventoryId;
-        private Long storeId;
-        private String storeName;
-        private String size;
-        private BigDecimal price;
-        private Integer discountPercent;
-        private BigDecimal discountedPrice;
-        private Integer quantity;
-        private Boolean inStock;
+        private String size;                  // "128GB", "256GB", etc.
+        private BigDecimal price;             // Giá gốc
+        private Integer discountPercent;      // % giảm giá
+        private BigDecimal discountedPrice;   // Giá sau giảm
+        private Integer quantity;             // Số lượng tồn
+        private Boolean inStock;              // Còn hàng hay không
     }
 
     @Getter

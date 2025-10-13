@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.module.ResolutionException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,27 +104,56 @@ public class ProductService {
 
     public ProductDetailDTO getProductDetail(Long productId) {
         log.info("Fetching detail for product ID: {}", productId);
-        Product product = productRepository.findByIdAndIsActiveTrue(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found or is inactive"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResolutionException("Product not found with id: " + productId));
 
-        ProductDetailDTO dto = mapProductToDetailDTO(product);
+        ProductDetailDTO dto = new ProductDetailDTO();
 
-        List<Inventory> inventories = inventoryService.getInventoriesByProduct(productId);
-        List<ProductDetailDTO.PriceVariantDTO> priceVariants = inventories.stream().map(inventory -> {
-            ProductDetailDTO.PriceVariantDTO variantDTO = new ProductDetailDTO.PriceVariantDTO();
-            variantDTO.setInventoryId(inventory.getId());
-            variantDTO.setStoreId(inventory.getStoreId());
-            Store store = storeService.getStoreById(inventory.getStoreId());
-            variantDTO.setStoreName(store.getName());
-            variantDTO.setSize(inventory.getSize());
-            variantDTO.setPrice(inventory.getPrice());
-            variantDTO.setDiscountPercent(inventory.getDiscountPercent());
-            variantDTO.setDiscountedPrice(inventory.getDiscountedPrice());
-            variantDTO.setQuantity(inventory.getQuantity());
-            variantDTO.setInStock(inventory.getQuantity() > 0);
-            return variantDTO;
-        }).collect(Collectors.toList());
-        dto.setPriceVariants(priceVariants);
+        dto.setId(product.getId());
+        dto.setId(product.getId());
+        dto.setTitle(product.getTitle());
+        dto.setBrand(product.getBrand());
+        dto.setDescription(product.getDescription());
+        dto.setDetailedReview(product.getDetailedReview());
+        dto.setPowerfulPerformance(product.getPowerfulPerformance());
+
+        // Specs
+        dto.setColor(product.getColor());
+        dto.setWeight(product.getWeight());
+        dto.setDimension(product.getDimension());
+        dto.setBatteryType(product.getBatteryType());
+        dto.setBatteryCapacity(product.getBatteryCapacity());
+        dto.setRamCapacity(product.getRamCapacity());
+        dto.setRomCapacity(product.getRomCapacity());
+        dto.setScreenSize(product.getScreenSize());
+        dto.setConnectionPort(product.getConnectionPort());
+
+        dto.setImageUrls(product.getImages().stream()
+                .map(Image::getDownloadUrl)
+                .collect(Collectors.toList()));
+
+        if(product.getCategory() != null) {
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+        }
+
+        List<Inventory> inventories = inventoryRepository.findAllByProductId(productId);
+        dto.setPriceVariants(inventories.stream()
+                .map(inv -> new ProductDetailDTO.PriceVariantDTO(
+                        inv.getId(),
+                        inv.getSize(),
+                        inv.getPrice(),
+                        inv.getDiscountPercent(),
+                        inv.getDiscountedPrice(),
+                        inv.getQuantity(),
+                        inv.isInStock()
+                ))
+                .collect(Collectors.toList()));
+
+        dto.setAverageRating(product.getAverageRating());
+        dto.setNumRatings(product.getNumRatings());
+        dto.setQuantitySold(product.getQuantitySold());
+        dto.setIsActive(product.getIsActive());
 
         return dto;
     }

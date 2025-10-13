@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
@@ -14,15 +15,16 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT i FROM Inventory i WHERE i.product.id = :productId")
     List<Inventory> findAllByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT i FROM Inventory i WHERE i.product.id = :productId AND i.store.id = :storeId")
-    List<Inventory> findByProductIdAndStoreId(@Param("productId") Long productId,
-                                              @Param("storeId") Long storeId);
+    List<Inventory> findByProductId(Long productId);
 
-    @Query("SELECT i FROM Inventory i WHERE i.store.id = :storeId")
-    List<Inventory> findByStoreId(@Param("storeId") Long storeId);
+    Optional<Inventory> findByProductIdAndSize(Long productId, String size);
 
-    @Query("SELECT i FROM Inventory i WHERE i.product.id = :productId AND i.store.id = :storeId AND i.size = :size")
-    List<Inventory> findByProductIdAndStoreIdAndSize(@Param("productId") Long productId,
-                                                     @Param("storeId") Long storeId,
-                                                     @Param("size") String size);
+    /**
+     * Kiểm tra sản phẩm có còn hàng không (bất kỳ size nào)
+     */
+    @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END " +
+            "FROM Inventory i WHERE i.product.id = :productId AND i.quantity > 0")
+    boolean hasStock(@Param("productId") Long productId);
+
+
 }

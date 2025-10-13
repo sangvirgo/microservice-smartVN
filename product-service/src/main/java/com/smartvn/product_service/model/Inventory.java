@@ -13,17 +13,25 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
+/**
+ * ✅ SINGLE STORE VERSION - Không còn store_id
+ * Mỗi product có nhiều variants (size) với giá & số lượng riêng
+ */
 @Entity
-@Table(name="inventory", indexes = {
-        @Index(name = "idx_inventory_product", columnList = "product_id"),
-        @Index(name = "idx_inventory_store", columnList = "store_id"),
-        @Index(name = "idx_inventory_composite", columnList = "product_id, store_id, size")
-})
+@Table(name = "inventory",
+        indexes = {
+                @Index(name = "idx_inventory_product", columnList = "product_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_product_size", columnNames = {"product_id", "size"})
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class Inventory {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,22 +41,35 @@ public class Inventory {
     @JsonIgnore
     private Product product;
 
-    @ManyToOne(fetch = FetchType.EAGER) // EAGER để dễ dàng lấy tên cửa hàng
-    @JoinColumn(name = "store_id", nullable = false)
-    private Store store;
-
+    /**
+     * Size/Variant của sản phẩm
+     * VD: "128GB", "256GB", "512GB" cho điện thoại
+     *     "S", "M", "L" cho quần áo
+     */
     @Column(length = 50)
     private String size;
 
-    @Column(name = "quantity", nullable = false)
-    private Integer quantity;
+    /**
+     * Số lượng tồn kho
+     */
+    @Column(nullable = false)
+    private Integer quantity = 0;
 
-    @Column(name = "price", precision = 19, scale = 2, nullable = false)
+    /**
+     * Giá gốc
+     */
+    @Column(precision = 19, scale = 2, nullable = false)
     private BigDecimal price;
 
-    @Column(name = "discount_percent", nullable = false, columnDefinition = "INT default 0")
+    /**
+     * Phần trăm giảm giá (0-100)
+     */
+    @Column(name = "discount_percent", nullable = false)
     private Integer discountPercent = 0;
 
+    /**
+     * Giá sau khi giảm (tự động tính)
+     */
     @Column(name = "discounted_price", precision = 19, scale = 2)
     private BigDecimal discountedPrice;
 
@@ -60,6 +81,9 @@ public class Inventory {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /**
+     * Tự động tính giá sau khi giảm
+     */
     @PrePersist
     @PreUpdate
     public void calculateDiscountedPrice() {
@@ -71,7 +95,10 @@ public class Inventory {
         }
     }
 
-    public Long getStoreId() {
-        return store != null ? store.getId() : null;
+    /**
+     * Kiểm tra còn hàng
+     */
+    public boolean isInStock() {
+        return quantity != null && quantity > 0;
     }
 }
