@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.module.ResolutionException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,18 +48,17 @@ public class ProductService {
         log.info("Searching products - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
                 keyword, topLevelCategory, secondLevelCategory, minPrice, maxPrice);
 
-        // Xác định categoryId dựa trên tên category
-        Long categoryId = resolveCategoryId(topLevelCategory, secondLevelCategory);
+        // SỬA ĐỔI: Lấy về danh sách IDs
+        List<Long> categoryIds = resolveCategoryIds(topLevelCategory, secondLevelCategory);
 
-        if (categoryId == null && (topLevelCategory != null || secondLevelCategory != null)) {
-            log.warn("⚠️ Category not found for topLevel: {}, secondLevel: {}",
+        if (categoryIds != null && categoryIds.isEmpty()) {
+            log.warn("⚠️ Category specified but no matching IDs found for topLevel: {}, secondLevel: {}",
                     topLevelCategory, secondLevelCategory);
-            // Trả về page rỗng nếu category không tồn tại
             return Page.empty(pageable);
         }
 
         return productRepository.searchProducts(
-                keyword, categoryId, minPrice, maxPrice, pageable
+                keyword, categoryIds, minPrice, maxPrice, pageable
         ).map(this::toListingDTO);
     }
 
@@ -69,36 +69,30 @@ public class ProductService {
      * 2. Nếu chỉ có topLevelCategory -> tìm category cấp 1 với tên đó
      * 3. Nếu không có cả hai -> return null (không filter theo category)
      */
-    private Long resolveCategoryId(String topLevelCategory, String secondLevelCategory) {
-        // Ưu tiên secondLevelCategory nếu có
+    private List<Long> resolveCategoryIds(String topLevelCategory, String secondLevelCategory) {
         if (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty()) {
             return categoryRepository.findByName(secondLevelCategory.trim())
-                    .filter(cat -> cat.getLevel() == 2) // Đảm bảo là level 2
-                    .map(Category::getId)
-                    .orElseGet(() -> {
-                        log.warn("Second-level category '{}' not found", secondLevelCategory);
-                        return null;
-                    });
+                    .filter(cat -> cat.getLevel() == 2)
+                    .map(cat -> Collections.singletonList(cat.getId()))
+                    .orElse(Collections.emptyList());
         }
 
-        // Nếu chỉ có topLevelCategory
         if (topLevelCategory != null && !topLevelCategory.trim().isEmpty()) {
-            Category topCategory = categoryRepository.findByName(topLevelCategory.trim())
+            return categoryRepository.findByName(topLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 1)
-                    .orElse(null);
-
-            if (topCategory == null) {
-                log.warn("Top-level category '{}' not found", topLevelCategory);
-                return null;
-            }
-
-            // Nếu là category level 1, trả về tất cả sản phẩm thuộc category đó và các sub-categories
-            // Để làm điều này, bạn cần modify query hoặc lấy tất cả sub-category IDs
-            // Hiện tại, tạm trả về ID của category level 1
-            return topCategory.getId();
+                    .map(parent -> {
+                        List<Long> ids = new ArrayList<>();
+                        // Thêm ID của chính nó (dù ít khả năng sản phẩm gán trực tiếp vào đây)
+                        ids.add(parent.getId());
+                        if (parent.getSubCategories() != null) {
+                            ids.addAll(parent.getSubCategories().stream().map(Category::getId).collect(Collectors.toList()));
+                        }
+                        return ids;
+                    })
+                    .orElse(Collections.emptyList());
         }
 
-        return null; // Không filter theo category
+        return null; // Không lọc theo category
     }
 
     public ProductDetailDTO getProductDetail(Long productId) {
@@ -182,6 +176,24 @@ public class ProductService {
             dto.setPriceRange(formatPriceRange(minPrice, maxPrice));
             dto.setDiscountedPriceRange(formatPriceRange(minDiscountedPrice, maxDiscountedPrice));
             dto.setInStock(totalStock > 0);
+
+            boolean hasAnyDiscount = inventories.stream()
+                    .anyMatch(inv -> inv.getDiscountPercent() != null && inv.getDiscountPercent() > 0);
+            dto.setHasDiscount(hasAnyDiscount);
+
+            dto.setVariantCount(inventories.size());
+
+            List<String> badges = new ArrayList<>();
+            if (product.getQuantitySold() != null && product.getQuantitySold() > 50) {
+                badges.add("Bán chạy");
+            }
+            if (hasAnyDiscount) {
+                badges.add("Giảm giá");
+            }
+            if (product.getAverageRating() != null && product.getAverageRating() >= 4.5) {
+                badges.add("Đánh giá cao");
+            }
+            dto.setBadges(badges);
         } else {
             dto.setInStock(false);
             dto.setPriceRange("N/A");

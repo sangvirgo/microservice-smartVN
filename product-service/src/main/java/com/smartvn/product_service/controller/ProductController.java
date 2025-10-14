@@ -4,7 +4,9 @@ import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;
+import com.smartvn.product_service.model.Image;
 import com.smartvn.product_service.model.Product;
+import com.smartvn.product_service.service.ImageService;
 import com.smartvn.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -26,7 +29,7 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService productService;
-
+    private final ImageService  imageService;
     /**
      * API để lấy danh sách sản phẩm (phân trang) và hỗ trợ tìm kiếm, lọc.
      *
@@ -101,6 +104,25 @@ public class ProductController {
                 .data(result)
                 .build();
 
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    /**
+     * SỬA ĐỔI: Chuyển endpoint upload ảnh vào đây
+     * API để upload hình ảnh cho một sản phẩm.
+     * Cần được bảo vệ (chỉ ADMIN).
+     */
+    @PostMapping("/{id}/images")
+    public ResponseEntity<ApiResponse<Image>> uploadImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+
+        Image savedImage = imageService.uploadImageForProduct(id, file);
+
+        ApiResponse<Image> response = ApiResponse.<Image>builder()
+                .message("Image uploaded successfully.")
+                .data(savedImage)
+                .build();
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

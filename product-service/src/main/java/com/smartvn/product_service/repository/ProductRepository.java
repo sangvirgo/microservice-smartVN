@@ -27,7 +27,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query(value = "SELECT DISTINCT p.* FROM products p " +
             "WHERE p.is_active = true " +
             "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "AND (:categoryId IS NULL OR p.category_id = :categoryId) " +
+            // SỬA ĐỔI: Sử dụng IN thay vì = và kiểm tra nếu list rỗng thì không lọc
+            "AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds)) " +
             "AND (" +
             "  :minPrice IS NULL OR EXISTS (" +
             "    SELECT 1 FROM inventory i WHERE i.product_id = p.id AND i.discounted_price >= :minPrice" +
@@ -42,7 +43,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             countQuery = "SELECT count(DISTINCT p.id) FROM products p " +
                     "WHERE p.is_active = true " +
                     "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-                    "AND (:categoryId IS NULL OR p.category_id = :categoryId) " +
+                    // SỬA ĐỔI: Sử dụng IN thay vì = và kiểm tra nếu list rỗng thì không lọc
+                    "AND (:categoryIds IS NULL OR p.category_id IN (:categoryIds)) " +
                     "AND (" +
                     "  :minPrice IS NULL OR EXISTS (" +
                     "    SELECT 1 FROM inventory i WHERE i.product_id = p.id AND i.discounted_price >= :minPrice" +
@@ -56,7 +58,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             nativeQuery = true)
     Page<Product> searchProducts(
             @Param("keyword") String keyword,
-            @Param("categoryId") Long categoryId,
+            // SỬA ĐỔI: Chấp nhận List<Long>
+            @Param("categoryIds") List<Long> categoryIds,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
             Pageable pageable

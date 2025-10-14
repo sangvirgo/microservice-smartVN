@@ -59,27 +59,30 @@ public class ReviewService {
         try {
             log.debug("Fetching user info for userId: {}", review.getUserId());
             UserInfoDTO userInfo = userServiceClient.getUserInfo(review.getUserId());
-            if (userInfo != null) { // <-- THÊM NULL CHECK
+            if (userInfo != null) {
                 dto.setUserFirstName(userInfo.getFirstName());
                 dto.setUserLastName(userInfo.getLastName());
                 dto.setUserAvatar(userInfo.getAvatar());
             } else {
-                // Đặt giá trị mặc định nếu userInfo là null
-                dto.setUserFirstName("Anonymous");
-                dto.setUserLastName("");
-                dto.setUserAvatar(null);
+                // SỬA ĐỔI: Thêm log khi userInfo trả về là null
+                log.warn("User info for userId: {} was null.", review.getUserId());
+                setFallbackUserInfo(dto);
             }
-
         } catch (Exception e) {
-            log.error("Failed to fetch user info for userId: {}. Error: {}",
-                    review.getUserId(), e.getMessage());
-            // Fallback: set giá trị mặc định
-            dto.setUserFirstName("Anonymous");
-            dto.setUserLastName("");
-            dto.setUserAvatar(null);
+            // SỬA ĐỔI: Ghi log lỗi chi tiết hơn
+            log.error("Failed to fetch user info for userId: {}. Error type: {}. Message: {}",
+                    review.getUserId(), e.getClass().getName(), e.getMessage());
+            setFallbackUserInfo(dto);
         }
 
         return dto;
+    }
+
+    // Phương thức helper để tránh lặp code
+    private void setFallbackUserInfo(ReviewDTO dto) {
+        dto.setUserFirstName("Anonymous");
+        dto.setUserLastName("User");
+        dto.setUserAvatar(null); // Hoặc một URL avatar mặc định
     }
 
     // ✅ Update method này để trả về Page<ReviewDTO> thay vì Page<Review>
