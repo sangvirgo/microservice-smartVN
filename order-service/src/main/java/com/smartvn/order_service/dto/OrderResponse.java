@@ -1,6 +1,7 @@
 package com.smartvn.order_service.dto;
 
 
+import com.smartvn.order_service.dto.order.OrderItemDTO;
 import com.webanhang.team_project.dto.address.AddressDTO;
 import com.webanhang.team_project.dto.payment.PaymentDetailDTO;
 import lombok.Data;

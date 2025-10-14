@@ -2,52 +2,60 @@ package com.smartvn.order_service.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "order_items",
+        indexes = {
+                @Index(name = "idx_order", columnList = "order_id"),
+                @Index(name = "idx_product", columnList = "product_id")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
-@Entity
-@Table(name="order_item")
+@AllArgsConstructor
 public class OrderItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column(nullable = false)
+    private Integer quantity;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @Column(precision = 19, scale = 2, nullable = false)
+    private BigDecimal price;
 
-    @Column(name = "quantity")
-    private int quantity;
+    @Column(name = "discounted_price", precision = 19, scale = 2)
+    private BigDecimal discountedPrice;
 
-    @Column(name = "price")
-    private int price;
-
-    @Column(name = "size")
+    @Column(length = 50)
     private String size;
 
-    @Column(name = "discounted_price")
-    private Integer discountedPrice;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnore
+    private Order order;
 
-    @Column(name = "delivery_date")
-    private LocalDateTime deliveryDate;
+    // Không tạo quan hệ với Product, chỉ lưu productId
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
 
-    @Column(name = "discount_percent")
-    private Integer discountPercent;
-
-    // Helper method to get user through order
-    public User getUser() {
-        return order != null ? order.getUser() : null;
+    // Helper method để tính discount percent
+    @Transient
+    public Integer getDiscountPercent() {
+        if (price != null && discountedPrice != null && price.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discount = price.subtract(discountedPrice);
+            return discount.multiply(BigDecimal.valueOf(100))
+                    .divide(price, 0, BigDecimal.ROUND_HALF_UP)
+                    .intValue();
+        }
+        return 0;
     }
 }

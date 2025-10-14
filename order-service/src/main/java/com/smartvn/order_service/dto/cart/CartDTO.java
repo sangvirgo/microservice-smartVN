@@ -1,23 +1,28 @@
-package com.smartvn.order_service.dto;
+package com.smartvn.order_service.dto.cart;
 
-import com.webanhang.team_project.model.Cart;
-import com.webanhang.team_project.model.CartItem;
+import com.smartvn.order_service.model.Cart;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
 public class CartDTO {
     private Long id;
-    private int totalOriginalPrice;      // Tổng giá gốc
-    private int totalItems;      // Tổng số lượng sản phẩm
-    private int totalDiscountedPrice;  // Tổng giá sau giảm giá
-    private int discount;  // Tổng tiền giảm giá
+    private Long userId;
+    private Integer totalOriginalPrice;
+    private Integer totalItems;
+    private Integer totalDiscountedPrice;
+    private Integer discount;
     private List<CartItemDTO> cartItems;
 
+    /**
+     * Constructor từ Cart entity
+     */
     public CartDTO(Cart cart) {
         this.id = cart.getId();
+        this.userId = cart.getUserId();
         this.totalItems = cart.getTotalItems();
         this.totalDiscountedPrice = cart.getTotalDiscountedPrice();
         this.totalOriginalPrice = cart.getOriginalPrice();
@@ -27,7 +32,15 @@ public class CartDTO {
             this.cartItems = cart.getCartItems().stream()
                     .map(CartItemDTO::new)
                     .collect(Collectors.toList());
+        } else {
+            this.cartItems = new ArrayList<>();
         }
+    }
 
+    /**
+     * Constructor mặc định
+     */
+    public CartDTO() {
+        this.cartItems = new ArrayList<>();
     }
 }

@@ -1,80 +1,111 @@
 package com.smartvn.order_service.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.webanhang.team_project.enums.PaymentMethod;
-import com.webanhang.team_project.enums.PaymentStatus;
-import com.webanhang.team_project.enums.OrderStatus;
+import com.smartvn.order_service.enums.OrderStatus;
+import com.smartvn.order_service.enums.PaymentMethod;
+import com.smartvn.order_service.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
+@Entity
+@Table(name = "orders",
+        indexes = {
+                @Index(name = "idx_user", columnList = "user_id"),
+                @Index(name = "idx_order_status", columnList = "order_status"),
+                @Index(name = "idx_payment_status", columnList = "payment_status")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@DynamicInsert
-@Table(name="orders")
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "seller_id")
-    private Long sellerId;
+    @Column(name = "total_price", precision = 19, scale = 2, nullable = false)
+    private BigDecimal totalPrice;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id",nullable = false)
-    @JsonIgnore
-    private User user;
-
-    @Column(name="order_date")
-    private LocalDateTime orderDate;
-
-    @Column(name="original_price", precision = 19, scale = 2)
-    private int originalPrice;
+    @Column(name = "total_items", nullable = false)
+    private Integer totalItems = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="order_status")
-    private OrderStatus orderStatus;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Collection<OrderItem> orderItems = new HashSet<>();
-
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private PaymentDetail paymentDetails;
-
-    @ManyToOne
-    @JoinColumn(name = "orderAddress", unique = false)
-    private Address shippingAddress;
+    @Column(name = "order_status", length = 50, nullable = false)
+    private OrderStatus orderStatus = OrderStatus.PENDING;
 
     @Column(name = "delivery_date")
     private LocalDateTime deliveryDate;
 
-    @Column(name = "total_discounted_price")
-    private Integer totalDiscountedPrice;
-
-    @Column(name = "discount")
-    private int discount;
-
-    @Column(name = "total_items")
-    private int totalItems;
-
-    @Enumerated(EnumType.STRING) // Vẫn cần thiết
-    @Column(name = "payment_method")
-    @ColumnDefault("'COD'") // <-- Đặt giá trị mặc định dạng chuỗi SQL
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 50)
     private PaymentMethod paymentMethod;
 
-    @Column(name = "payment_status")
     @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
+    @Column(name = "payment_status", length = 50, nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+    // Không tạo quan hệ với User, chỉ lưu userId
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    // Không tạo quan hệ với Address, chỉ lưu addressId
+    @Column(name = "shipping_address_id", nullable = false)
+    private Long shippingAddressId;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private PaymentDetail paymentDetail;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    // Các trường tính toán (transient hoặc có thể lưu vào DB)
+    @Transient
+    private Integer originalPrice;
+
+    @Transient
+    private Integer discount;
+
+    @Transient
+    private Integer totalDiscountedPrice;
+
+    // Helper methods
+    public void calculateTotals() {
+        this.totalItems = orderItems.stream()
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+
+        this.originalPrice = orderItems.stream()
+                .mapToInt(item -> item.getPrice().intValue() * item.getQuantity())
+                .sum();
+
+        this.totalDiscountedPrice = orderItems.stream()
+                .mapToInt(item -> {
+                    BigDecimal itemPrice = item.getDiscountedPrice() != null ?
+                            item.getDiscountedPrice() : item.getPrice();
+                    return itemPrice.intValue() * item.getQuantity();
+                })
+                .sum();
+
+        this.discount = originalPrice - totalDiscountedPrice;
+        this.totalPrice = BigDecimal.valueOf(totalDiscountedPrice);
+    }
 }

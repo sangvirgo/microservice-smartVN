@@ -2,65 +2,72 @@ package com.smartvn.order_service.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "cart_items",
+        indexes = {
+                @Index(name = "idx_cart", columnList = "cart_id"),
+                @Index(name = "idx_product", columnList = "product_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_cart_product_size",
+                        columnNames = {"cart_id", "product_id", "size"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name="cart_item")
 public class CartItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @Column(nullable = false)
+    private Integer quantity;
+
+    @Column(precision = 19, scale = 2, nullable = false)
+    private BigDecimal price;
+
+    @Column(name = "discounted_price", precision = 19, scale = 2)
+    private BigDecimal discountedPrice;
+
+    @Column(length = 50)
+    private String size;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     @JsonIgnore
     private Cart cart;
 
-    @ManyToOne
-    @JoinColumn(name="product_id", nullable = false)
-    private Product product;
+    // Không tạo quan hệ với Product, chỉ lưu productId
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
 
-    @Column(name = "size")
-    private String size;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    @NotNull
-    @Min(1)
-    @Column(name = "quantity", nullable = false)
-    private int quantity;
+    // Helper method
+    @Transient
+    private Integer discountPercent; // Tính từ price và discountedPrice khi cần
 
-    @Column(name = "price")
-    private int price;
-
-    @Column(name = "discounted_price")
-    private int discountedPrice;
-
-    @Column(name = "discount_percent")
-    private int discountPercent;
-
-    public CartItem(Long id, Cart cart, Product product, String size,
-                    int quantity, int price, int discountedPrice) {
-        this.id = id;
-        this.cart = cart;
-        this.product = product;
-        this.size = size;
-        this.quantity = quantity;
-        this.price = price;
-        this.discountedPrice = discountedPrice;
-    }
-
-    public User getUser() {
-        return cart != null ? cart.getUser() : null;
+    public Integer getDiscountPercent() {
+        if (price != null && discountedPrice != null && price.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discount = price.subtract(discountedPrice);
+            return discount.multiply(BigDecimal.valueOf(100))
+                    .divide(price, 0, BigDecimal.ROUND_HALF_UP)
+                    .intValue();
+        }
+        return 0;
     }
 }
