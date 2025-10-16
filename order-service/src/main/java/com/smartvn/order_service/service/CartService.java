@@ -1,14 +1,16 @@
 package com.smartvn.order_service.service;
 
-
+import com.smartvn.order_service.client.ProductServiceClient;
 import com.smartvn.order_service.client.UserServiceClient;
 import com.smartvn.order_service.dto.cart.AddItemRequest;
+import com.smartvn.order_service.dto.product.InventoryCheckRequest;
+import com.smartvn.order_service.dto.product.InventoryDTO;
+import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.user.UserDTO;
 import com.smartvn.order_service.exceptions.AppException;
 import com.smartvn.order_service.model.*;
 import com.smartvn.order_service.repository.CartItemRepository;
 import com.smartvn.order_service.repository.CartRepository;
-import com.smartvn.order_service.service.CartItemService;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -19,7 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,8 +30,8 @@ import java.util.Set;
 public class CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final CartItemService cartItemService;
     private final UserServiceClient  userServiceClient;
+    private final ProductServiceClient productServiceClient;
 
     @Transactional(readOnly = true)
     public Cart getCart(Long userId) {
@@ -61,172 +64,118 @@ public class CartService {
                 .orElseGet(() -> createNewCart(userId));
     }
 
+    @Transactional
     public Cart addCartItem(Long userId, AddItemRequest req) {
-        Cart cart = findUserCart(userId);
-        Product product = productService.findProductById(req.getProductId());
-
-        // Kiểm tra sản phẩm có tồn tại trong giỏ hàng chưa
-        CartItem existingItem = cart.getCartItems().stream()
-                .filter(item -> item.getProduct().getId().equals(req.getProductId())
-                        && item.getSize().equals(req.getSize()))
-                .findFirst()
-                .orElse(null);
-
-        if (existingItem != null) {
-            // Cập nhật số lượng nếu sản phẩm đã tồn tại
-            existingItem.setQuantity(existingItem.getQuantity() + req.getQuantity());
-
-            ProductSize productSize = product.getSizes().stream()
-                    .filter(item -> item.getName().equals(req.getSize()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (existingItem.getQuantity() > productSize.getQuantity()) {
-                throw new RuntimeException("Số lượng sản phẩm không đủ trong kho");
-            }
-
-            cartItemRepository.save(existingItem);
-        } else {
-            // Thêm sản phẩm mới vào giỏ hàng
-            CartItem newItem = new CartItem();
-            newItem.setCart(cart);
-            newItem.setProduct(product);
-            newItem.setSize(req.getSize());
-            newItem.setQuantity(req.getQuantity());
-            newItem.setPrice(product.getPrice());
-            newItem.setDiscountedPrice(product.getDiscountedPrice());
-            cart.getCartItems().add(newItem);
-            newItem.setDiscountPercent(product.getDiscountPersent());
-            cartItemRepository.save(newItem);
+        Cart cart = getOrCreateCart(userId);
+        ProductDTO dto = productServiceClient.getProductById(req.getProductId());
+        if(dto == null || !dto.getIsActive()) {
+            throw new AppException("Product not available", HttpStatus.BAD_REQUEST);
         }
 
-        updateCartTotals(cart);
+        InventoryCheckRequest checkRequest = new InventoryCheckRequest(req.getProductId(), req.getSize(), req.getQuantity());
+        Boolean hasStock = productServiceClient.checkInventoryAvailability(checkRequest);
+        if(!hasStock) {
+            throw new AppException("Insufficient stock", HttpStatus.BAD_REQUEST);
+        }
+
+        List<InventoryDTO> inventoryDTOS = productServiceClient.getProductInventory(req.getProductId());
+        InventoryDTO inventoryDTO = inventoryDTOS.stream()
+                .filter(i -> i.getSize().equals(req.getSize()))
+                .findFirst()
+                .orElseThrow(() -> new AppException("Size not found", HttpStatus.NOT_FOUND));
+
+        Optional<CartItem> existingItem = cartRepository
+                .findByCartIdAndProductIdAndSize(cart.getId(), req.getProductId(), req.getSize());
+
+        if(existingItem.isPresent()) {
+            CartItem ci = existingItem.get();
+            ci.setQuantity(ci.getQuantity() + req.getQuantity());
+            cartItemRepository.save(ci);
+        } else {
+            CartItem ci = new CartItem();
+            ci.setCart(cart);
+            ci.setProductId(req.getProductId());
+            ci.setSize(req.getSize());
+            ci.setQuantity(req.getQuantity());
+            ci.setPrice(inventoryDTO.getPrice());
+            ci.setDiscountedPrice(inventoryDTO.getDiscountedPrice());
+            cartItemRepository.save(ci);
+        }
+
+        reCalculateCart(cart);
         return cartRepository.save(cart);
     }
 
-    // Trong CartServiceImpl.java (hoặc tương đương)
-    @Transactional // Đảm bảo các thao tác DB trong cùng transaction
-    public Cart updateCartItem(Long userId, Long itemId, AddItemRequest req) { // Giữ AddItemRequest vì Controller đang dùng nó
-        // Hoặc tốt hơn là tạo một DTO mới chỉ chứa quantity: CartItemQuantityUpdateRequest
-        // public Cart updateCartItem(Long userId, Long itemId, CartItemQuantityUpdateRequest req) {
+    @Transactional
+    public Cart updateCartItem(Long userId, Long itemId, AddItemRequest req) {
+        Cart cart = getOrCreateCart(userId);
 
-        // 1. Tìm giỏ hàng của user (vẫn cần thiết)
-        Cart cart = findUserCart(userId); // Hàm này cần đảm bảo hoạt động đúng
+        CartItem item = cartItemRepository.findById(itemId).
+                orElseThrow(() -> new AppException("Item not found", HttpStatus.NOT_FOUND));
 
-        // 2. Tìm CartItem cần cập nhật bằng itemId
-        CartItem item = cartItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + itemId)); // Dùng exception cụ thể hơn
-
-        // 3. Kiểm tra xem CartItem có thuộc về giỏ hàng của user không
-        if (!item.getCart().getId().equals(cart.getId())) {
-            throw new RuntimeException("Cart item does not belong to the current user's cart."); // Dùng exception cụ thể
+        if(!item.getCart().getId().equals(cart.getId())) {
+            throw new AppException("Unauthorized request", HttpStatus.UNAUTHORIZED);
         }
 
-        // 4. Lấy số lượng mới từ request
-        Integer newQuantity = req.getQuantity(); // Lấy quantity từ request DTO
-        if (newQuantity == null || newQuantity < 1) {
-            throw new RuntimeException("Quantity must be greater than 0."); // Validate số lượng
+        InventoryCheckRequest checkRequest = new InventoryCheckRequest(
+                item.getProductId(),
+                item.getSize(),
+                req.getQuantity()
+        );
+        Boolean hasStock = productServiceClient.checkInventoryAvailability(checkRequest);
+        if (!hasStock) {
+            throw new AppException("Insufficient stock", HttpStatus.BAD_REQUEST);
         }
 
-        // 5. *** QUAN TRỌNG: Kiểm tra số lượng tồn kho ***
-        // Cần lấy thông tin Product và ProductSize liên quan đến CartItem *hiện tại*
-        // Không nên dựa vào productId/size từ request body (vì nó không được gửi hoặc không cần thiết)
-        Product product = item.getProduct(); // Lấy Product từ CartItem
-        String itemSizeName = item.getSize(); // Lấy Size từ CartItem
-
-        if (product == null) {
-            throw new RuntimeException("Product associated with cart item not found."); // Lỗi dữ liệu nếu product null
-        }
-
-        // Tìm ProductSize tương ứng với size của CartItem
-        ProductSize productSize = product.getSizes().stream()
-                .filter(ps -> ps.getName().equals(itemSizeName))
-                .findFirst()
-                .orElse(null); // Hoặc .orElseThrow nếu size bắt buộc phải tồn tại
-
-        if (productSize == null) {
-            throw new RuntimeException("Size '" + itemSizeName + "' not found for product " + product.getId());
-        }
-
-        // Kiểm tra số lượng tồn kho so với số lượng MỚI yêu cầu
-        if (newQuantity > productSize.getQuantity()) {
-            throw new RuntimeException("Số lượng sản phẩm '" + product.getTitle() + "' size '" + itemSizeName + "' không đủ trong kho (Còn lại: " + productSize.getQuantity() + ")");
-        }
-        // *************************************************
-
-        // 6. Cập nhật số lượng cho CartItem
-        item.setQuantity(newQuantity);
-        // Có thể cần cập nhật lại giá nếu giá sản phẩm thay đổi (tùy logic)
-        // item.setPrice(product.getPrice());
-        // item.setDiscountedPrice(product.getDiscountedPrice());
-
-        // 7. Lưu lại CartItem đã cập nhật
+        item.setQuantity(req.getQuantity());
         cartItemRepository.save(item);
-
-        // 8. Cập nhật lại tổng tiền của giỏ hàng
-        updateCartTotals(cart); // Hàm này tính lại totalPrice, totalDiscountedPrice...
-
-        // 9. Lưu lại giỏ hàng (không bắt buộc nếu updateCartTotals không thay đổi cart entity)
-        // return cartRepository.save(cart);
-        return cart; // Trả về cart đã được cập nhật (trong bộ nhớ)
+        reCalculateCart(cart);
+        return cartRepository.save(cart);
     }
 
-// Đồng thời sửa Controller để nhận DTO chỉ có quantity nếu muốn
-// Hoặc giữ nguyên AddItemRequest nhưng chỉ dùng trường quantity của nó trong service.
 
     public void removeCartItem(Long userId, Long itemId) {
-        Cart cart = findUserCart(userId);
+        Cart cart = getOrCreateCart(userId);
+
         CartItem item = cartItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> new AppException("Item not found", HttpStatus.NOT_FOUND));
 
         if (!item.getCart().getId().equals(cart.getId())) {
-            throw new RuntimeException("Cart item does not belong to user");
+            throw new AppException("Unauthorized", HttpStatus.FORBIDDEN);
         }
 
-        cart.getCartItems().remove(item);
         cartItemRepository.delete(item);
-
-        updateCartTotals(cart);
-        cartRepository.save(cart);
+        reCalculateCart(cart);
     }
 
     @Transactional  // Thêm annotation này
     public void clearCart(Long userId) {
-        Cart cart = findUserCart(userId);
+        Cart cart = getOrCreateCart(userId);
+        cartItemRepository.deleteByCartId(cart.getId());
 
-        // Xóa các mục từ bảng cart_items trước
-        cartItemService.deleteAllCartItems(cart.getId(), userId);
-
-        // Cập nhật đối tượng cart
-        cart.getCartItems().clear();
         cart.setTotalItems(0);
         cart.setOriginalPrice(0);
         cart.setTotalDiscountedPrice(0);
         cart.setDiscount(0);
-
-        // Lưu giỏ hàng đã được cập nhật
         cartRepository.save(cart);
     }
 
-    private void updateCartTotals(Cart cart) {
-        Set<CartItem> items = cart.getCartItems(); // use set
-
-        int totalOriginalPrice = items.stream()
-                .mapToInt(item -> item.getPrice() * item.getQuantity())
-                .sum();
-
-        int totalDiscountedPrice = items.stream()
-                .mapToInt(item -> item.getDiscountedPrice() * item.getQuantity())
-                .sum();
+    private void reCalculateCart(Cart cart) {
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
 
         int totalItems = items.stream()
-                .mapToInt(CartItem::getQuantity)
-                .sum();
+                .mapToInt(CartItem::getQuantity).sum();
 
-        cart.setOriginalPrice(totalOriginalPrice);
-        cart.setTotalDiscountedPrice(totalDiscountedPrice);
+        int originalPrice = items.stream()
+                .mapToInt(item -> item.getPrice().intValue() * item.getQuantity()).sum();
+
+        int discountPrice = items.stream()
+                .mapToInt(item -> item.getDiscountedPrice().intValue() * item.getQuantity()).sum();
+
         cart.setTotalItems(totalItems);
-        cart.setDiscount(totalOriginalPrice - totalDiscountedPrice);
+        cart.setTotalDiscountedPrice(discountPrice);
+        cart.setOriginalPrice(originalPrice);
+        cart.setDiscount(originalPrice-discountPrice);
     }
 
     @CircuitBreaker(name = "userService", fallbackMethod = "validateUserFallback")

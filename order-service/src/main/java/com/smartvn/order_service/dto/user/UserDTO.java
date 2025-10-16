@@ -18,6 +18,7 @@ public class UserDTO {
     private String phone;
     private String imageUrl;
     private Boolean isBanned;
+    private Boolean active;
     private String roleName; // CUSTOMER, STAFF, ADMIN
 
     /**
