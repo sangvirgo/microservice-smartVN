@@ -1,14 +1,14 @@
-package com.webanhang.team_project.service.cart;
+package com.smartvn.order_service.service;
 
 
-import com.webanhang.team_project.exceptions.GlobalExceptionHandler;
-import com.webanhang.team_project.model.Cart;
-import com.webanhang.team_project.model.CartItem;
-import com.webanhang.team_project.model.Product;
-import com.webanhang.team_project.repository.CartItemRepository;
-import com.webanhang.team_project.repository.CartRepository;
-import com.webanhang.team_project.service.product.IProductService;
-import com.webanhang.team_project.service.user.UserService;
+import com.smartvn.order_service.exceptions.GlobalExceptionHandler;
+import com.smartvn.order_service.model.Cart;
+import com.smartvn.order_service.model.CartItem;
+import com.smartvn.order_service.model.Product;
+import com.smartvn.order_service.repository.CartItemRepository;
+import com.smartvn.order_service.repository.CartRepository;
+import com.smartvn.order_service.service.product.IProductService;
+import com.smartvn.order_service.service.user.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,9 +17,8 @@ import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
-public class CartItemService implements ICartItemService {
+public class CartItemService {
     private final CartItemRepository cartItemRepository;
-    private final IProductService productService;
 
     @Override
     public CartItem addCartItem(CartItem cartItem) {

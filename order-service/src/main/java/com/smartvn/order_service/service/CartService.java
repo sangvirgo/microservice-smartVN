@@ -1,13 +1,21 @@
-package com.webanhang.team_project.service.cart;
+package com.smartvn.order_service.service;
 
 
-import com.webanhang.team_project.dto.cart.AddItemRequest;
-import com.webanhang.team_project.model.*;
-import com.webanhang.team_project.repository.CartItemRepository;
-import com.webanhang.team_project.repository.CartRepository;
-import com.webanhang.team_project.service.product.IProductService;
-import com.webanhang.team_project.service.user.UserService;
+import com.smartvn.order_service.client.UserServiceClient;
+import com.smartvn.order_service.dto.cart.AddItemRequest;
+import com.smartvn.order_service.dto.user.UserDTO;
+import com.smartvn.order_service.exceptions.AppException;
+import com.smartvn.order_service.model.*;
+import com.smartvn.order_service.repository.CartItemRepository;
+import com.smartvn.order_service.repository.CartRepository;
+import com.smartvn.order_service.service.CartItemService;
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,51 +23,44 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class CartService implements ICartService {
+@Slf4j
+public class CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final IProductService productService;
-    private final UserService userService;
-    private final ICartItemService cartItemService;
+    private final CartItemService cartItemService;
+    private final UserServiceClient  userServiceClient;
 
-
-    @Override
-    public Cart createCart(User user) {
-        Cart cart = new Cart();
-        cart.setUser(user);
-        return cartRepository.save(cart);
+    @Transactional(readOnly = true)
+    public Cart getCart(Long userId) {
+        return cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException(
+                        "Cart not found for user: " + userId,
+                        HttpStatus.NOT_FOUND
+                ));
     }
 
-    private Cart createCart(Long userId)  {
-        User user = userService.getUserById(userId);
-        return createCart(user);
-    }
+    @Transactional
+    public Cart createCart(Long userId) {
+        validateUser(userId);
 
-    @Override
-    public Cart findUserCart(Long userId) {
-        Cart cart = cartRepository.findByUserId(userId);
-        if (cart == null) {
-            // Tạo giỏ hàng mới nếu chưa có
-            cart = createCart(userId);
+        if(cartRepository.existsByUserId(userId)) {
+            throw new AppException(
+                    "Cart already exists for user: " + userId,
+                    HttpStatus.CONFLICT
+            );
         }
-        return cart;
-    }
-    
-    @Override
-    public Cart getCartByUserId(Long userId) {
-        return findUserCart(userId);
-    }
-    
-    @Override
-    public Cart initializeNewCartForUser(User user) {
-        Cart existingCart = cartRepository.findByUserId(user.getId());
-        if (existingCart != null) {
-            return existingCart;
-        }
-        return createCart(user);
+
+        return createNewCart(userId);
     }
 
-    @Override
+    @Transactional
+    public Cart getOrCreateCart(Long userId) {
+        validateUser(userId);
+
+        return cartRepository.findByUserId(userId)
+                .orElseGet(() -> createNewCart(userId));
+    }
+
     public Cart addCartItem(Long userId, AddItemRequest req) {
         Cart cart = findUserCart(userId);
         Product product = productService.findProductById(req.getProductId());
@@ -104,7 +105,6 @@ public class CartService implements ICartService {
     }
 
     // Trong CartServiceImpl.java (hoặc tương đương)
-    @Override
     @Transactional // Đảm bảo các thao tác DB trong cùng transaction
     public Cart updateCartItem(Long userId, Long itemId, AddItemRequest req) { // Giữ AddItemRequest vì Controller đang dùng nó
         // Hoặc tốt hơn là tạo một DTO mới chỉ chứa quantity: CartItemQuantityUpdateRequest
@@ -174,7 +174,6 @@ public class CartService implements ICartService {
 // Đồng thời sửa Controller để nhận DTO chỉ có quantity nếu muốn
 // Hoặc giữ nguyên AddItemRequest nhưng chỉ dùng trường quantity của nó trong service.
 
-    @Override
     public void removeCartItem(Long userId, Long itemId) {
         Cart cart = findUserCart(userId);
         CartItem item = cartItemRepository.findById(itemId)
@@ -191,7 +190,6 @@ public class CartService implements ICartService {
         cartRepository.save(cart);
     }
 
-    @Override
     @Transactional  // Thêm annotation này
     public void clearCart(Long userId) {
         Cart cart = findUserCart(userId);
@@ -229,6 +227,50 @@ public class CartService implements ICartService {
         cart.setTotalDiscountedPrice(totalDiscountedPrice);
         cart.setTotalItems(totalItems);
         cart.setDiscount(totalOriginalPrice - totalDiscountedPrice);
+    }
+
+    @CircuitBreaker(name = "userService", fallbackMethod = "validateUserFallback")
+    @Retry(name = "userService")
+    private void validateUser(Long userId) {
+        try {
+            UserDTO user = userServiceClient.getUserById(userId);
+            if(user == null) {
+                throw new AppException("User not found", HttpStatus.NOT_FOUND);
+            }
+            if(user.getIsBanned()) {
+                throw new AppException("User is already banned", HttpStatus.FORBIDDEN);
+            }
+        } catch (FeignException.NotFound e) {
+            throw new AppException("User not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    private void validateUserFallback(Long userId, Exception e) {
+        log.error("Failed to validate user {} after retries: {}",
+                userId, e.getMessage());
+        throw new AppException(
+                "User service temporarily unavailable",
+                HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+
+    private Cart createNewCart(Long userId) {
+        try {
+            Cart cart = new Cart();
+            cart.setUserId(userId);
+            cart.setTotalItems(0);
+            cart.setOriginalPrice(0);
+            cart.setTotalDiscountedPrice(0);
+            cart.setDiscount(0);
+            return cartRepository.save(cart);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Cart already created for user {}", userId);
+            return cartRepository.findByUserId(userId)
+                    .orElseThrow(() -> new AppException(
+                            "Failed to create cart",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
     }
 }
 
