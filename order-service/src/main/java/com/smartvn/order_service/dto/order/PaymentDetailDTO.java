@@ -1,4 +1,4 @@
-package com.smartvn.order_service.dto;
+package com.smartvn.order_service.dto.order;
 
 import lombok.Data;
 

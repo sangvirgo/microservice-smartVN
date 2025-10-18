@@ -1,9 +1,14 @@
 package com.smartvn.order_service.controller;
 
+import com.smartvn.order_service.client.ProductServiceClient;
+import com.smartvn.order_service.client.UserServiceClient;
+import com.smartvn.order_service.dto.cart.CreateOrderRequest;
 import com.smartvn.order_service.dto.order.OrderDTO;
+import com.smartvn.order_service.dto.order.OrderItemDTO;
+import com.smartvn.order_service.dto.product.ProductDTO;
+import com.smartvn.order_service.dto.user.AddressDTO;
 import com.smartvn.order_service.enums.OrderStatus;
 import com.smartvn.order_service.exceptions.AppException;
-import com.smartvn.order_service.model.Cart;
 import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.dto.response.ApiResponse;
 import com.smartvn.order_service.service.OrderService;
@@ -30,6 +35,8 @@ import java.util.stream.Collectors;
 public class OrderController {
     private final OrderService orderService;
     private final UserService userService;
+    private final UserServiceClient  userServiceClient;
+    private final ProductServiceClient  productServiceClient;
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
@@ -67,33 +74,51 @@ public class OrderController {
         }
     }
 
-    @PostMapping("/create/{addressId}")
-    public ResponseEntity<?> createOrder(@RequestHeader("Authorization") String jwt,
-                                         @PathVariable("addressId") Long addressId) {
+    @PostMapping("/create")
+    public ResponseEntity<?> createOrder(
+            @RequestHeader("Authorization") String jwt,
+            @RequestBody CreateOrderRequest request) {
         try {
             Long userId=userService.getUserIdFromJwt(jwt);
             userService.validateUser(userId);
-            List<Order> orders = orderService.placeOrder(addressId, userId);
-            if(orders.isEmpty() || orders==null) {
+
+            if(request.getCartItemIds().isEmpty() || request.getCartItemIds()==null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "error", "Vui lòng chọn sản phẩm để đặt hàng",
+                                "code", "NO_ITEMS_SELECTED"
+                        ));
+            }
+
+            Order order = orderService.placeOrder(
+                    userId,
+                    request.getAddressId(),
+                    request.getCartItemIds()
+            );
+
+            if(order==null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
                                 "error", "Cannot create order. Cart might be empty.",
                                 "code", "EMPTY_CART"
                         ));
             }
-            List<OrderDTO> orderDTOs = orders.stream()
-                    .map(OrderDTO::new)
-                    .collect(Collectors.toList());
+
+            OrderDTO orderDTO = new OrderDTO(order);
+
+            enrichOrderDTO(orderDTO);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("orders", orderDTOs);
-            response.put("message", "Successfully created " + orders.size() + " order(s).");
+            response.put("order", orderDTO);
+            response.put("message", "Đặt hàng thành công!");
+
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (AppException e) {
             log.error("Error while creating order.", e.getMessage());
             return ResponseEntity.status(e.getStatus())
                     .body(Map.of(
-                            "error", e.getMessage(), "code", "ORDER_ERROR"
+                            "error", e.getMessage(),
+                            "code", "ORDER_ERROR"
                     ));
         } catch (Exception e) {
             log.error("Unexpected error creating order: ", e);
@@ -185,40 +210,22 @@ public class OrderController {
         }
     }
 
+    private void enrichOrderDTO(OrderDTO orderDTO) {
+        // Lấy thông tin address
+        try {
+            AddressDTO address = userServiceClient.getAddressById(orderDTO.getShippingAddressId());
+            orderDTO.setShippingAddress(address);
+        } catch (Exception e) {
+            log.warn("Failed to fetch address info: {}", e.getMessage());
+        }
 
-//    @PostMapping("/send-mail/{orderId}")
-//    public ResponseEntity<ApiResponse> sendMail(@RequestHeader("Authorization") String jwt,
-//                                                @PathVariable("orderId") Long orderId) {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        if (authentication == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                    .body(ApiResponse.error("Unauthorized"));
-//        }
-//
-//        User user = userService.findUserByJwt(jwt);
-//        if (user == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                    .body(ApiResponse.error("User not found"));
-//        }
-//
-//        try {
-//            Order order = orderService.findOrderById(orderId);
-//            if (order == null) {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                        .body(ApiResponse.error("Order not found"));
-//            }
-//
-//            if (!order.getUser().getId().equals(user.getId())) {
-//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                        .body(ApiResponse.error("You don't have permission to access this order"));
-//            }
-//
-//            otpService.sendOrderMail(user.getEmail(), order);
-//            return ResponseEntity.ok(ApiResponse.success(null, "Email sent successfully"));
-//        } catch (Exception e) {
-//            log.error("Error sending email for order {}: {}", orderId, e.getMessage(), e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(ApiResponse.error("Failed to send email: " + e.getMessage()));
-//        }
-//    }
+        // Lấy thông tin product cho từng OrderItem
+        for (OrderItemDTO item : orderDTO.getOrderItems()) {
+            try {
+                ProductDTO product = productServiceClient.getProductById(item.getProductId());
+                item.enrichWithProductInfo(product);
+            } catch (Exception e) {
+                log.warn("Failed to fetch product {} info: {}", item.getProductId(), e.getMessage());
+            }
+        }
 }

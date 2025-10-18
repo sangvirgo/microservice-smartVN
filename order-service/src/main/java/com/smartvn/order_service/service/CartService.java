@@ -160,7 +160,7 @@ public class CartService {
         cartRepository.save(cart);
     }
 
-    private void reCalculateCart(Cart cart) {
+    public void reCalculateCart(Cart cart) {
         List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
 
         int totalItems = items.stream()
