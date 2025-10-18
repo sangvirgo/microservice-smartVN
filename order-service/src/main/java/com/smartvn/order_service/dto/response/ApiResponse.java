@@ -21,4 +21,8 @@ public class ApiResponse<T> {
                 .message(message)
                 .build();
     }
+
+    public static <T> ApiResponse<T> success(T data, String message, Map<String, Object> pagination) {
+        return new ApiResponse<>(data, message, pagination);
+    }
 }
