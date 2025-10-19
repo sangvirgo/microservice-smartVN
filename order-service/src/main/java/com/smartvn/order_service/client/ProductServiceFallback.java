@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fallback khi Product Service không khả dụng
@@ -55,5 +57,19 @@ public class ProductServiceFallback implements ProductServiceClient {
     public void restoreInventory(InventoryCheckRequest request) {
         log.error("Product Service unavailable. Cannot restore inventory: {}", request);
         // Log error nhưng không throw exception vì đây là rollback operation
+    }
+
+    // Thiếu method này
+    @Override
+    public Map<String, Boolean> batchCheckInventory(List<InventoryCheckRequest> requests) {
+        log.error("Product Service unavailable. Cannot batch check inventory");
+        return new HashMap<>(); // Trả về Map rỗng để an toàn
+    }
+
+    // Thiếu method này
+    @Override
+    public void batchReduceInventory(List<InventoryCheckRequest> requests) {
+        log.error("Product Service unavailable. Cannot batch reduce inventory");
+        throw new RuntimeException("Product Service is currently unavailable");
     }
 }

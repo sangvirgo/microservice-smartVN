@@ -1,6 +1,8 @@
 package com.smartvn.order_service.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.smartvn.order_service.enums.PaymentMethod;
+import com.smartvn.order_service.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,10 +31,10 @@ public class PaymentDetail {
     private Long id;
 
     @Column(name = "payment_method", length = 50)
-    private String paymentMethod;
+    private PaymentMethod paymentMethod;
 
     @Column(name = "payment_status", length = 50)
-    private String paymentStatus;
+    private PaymentStatus paymentStatus;
 
     @Column(name = "payment_date")
     private LocalDateTime paymentDate;

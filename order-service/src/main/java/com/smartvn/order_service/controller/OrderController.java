@@ -54,6 +54,9 @@ public class OrderController {
             List<OrderDTO> orderDTOS = orders.stream()
                     .map(OrderDTO::new)
                     .collect(Collectors.toList());
+            for (OrderDTO dto : orderDTOS) {
+                enrichOrderDTO(dto);
+            }
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
             response.put("messages", "Successfully retrieved order history");
@@ -139,7 +142,7 @@ public class OrderController {
     }
 
     @GetMapping("/status")
-    public ResponseEntity<?> getPendingOrders(@RequestHeader("Authorization") String jwt, OrderStatus orderStatus) {
+    public ResponseEntity<?> getByStatusOrders(@RequestHeader("Authorization") String jwt, OrderStatus orderStatus) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -159,6 +162,9 @@ public class OrderController {
             List<OrderDTO> orderDTOS = orders.stream()
                     .map(OrderDTO::new)
                     .collect(Collectors.toList());
+            for (OrderDTO dto : orderDTOS) {
+                enrichOrderDTO(dto);
+            }
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
             response.put("messages", "Successfully retrieved order history");
@@ -228,4 +234,5 @@ public class OrderController {
                 log.warn("Failed to fetch product {} info: {}", item.getProductId(), e.getMessage());
             }
         }
+    }
 }

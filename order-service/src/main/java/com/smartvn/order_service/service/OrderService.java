@@ -187,6 +187,27 @@ public class OrderService {
         orderItem.setDiscountedPrice(cartItem.getDiscountedPrice());
         return orderItem;
     }
+
+    @Transactional
+    public Order updateOrderPaymentAndStatus(Long orderId, PaymentStatus paymentStatus, PaymentMethod paymentMethod) {
+        Order order = findOrderById(orderId);
+        if(order.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new AppException(
+                    "Cannot update payment for order with status: " + order.getPaymentStatus(),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        order.setPaymentMethod(paymentMethod);
+        order.setPaymentStatus(paymentStatus);
+
+        // Nếu thanh toán thành công -> confirm đơn hàng
+        if (paymentStatus == PaymentStatus.COMPLETED) {
+            order.setOrderStatus(OrderStatus.CONFIRMED);
+        }
+
+        return orderRepository.save(order);
+    }
 }
 
 

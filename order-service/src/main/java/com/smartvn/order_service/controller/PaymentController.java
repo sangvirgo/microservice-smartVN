@@ -1,14 +1,12 @@
 package com.smartvn.order_service.controller;
 
-import com.smartvn.order_service.exceptions.AppException;
 import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.model.PaymentDetail;
-import com.smartvn.order_service.model.User;
-import com.smartvn.order_service.service.payment.PaymentService;
-import com.smartvn.order_service.service.order.OrderService;
-import com.smartvn.order_service.service.user.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.smartvn.order_service.service.OrderService;
+import com.smartvn.order_service.service.PaymentService;
+import com.smartvn.order_service.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,16 +16,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
+@Slf4j
 @RequestMapping("${api.prefix}/payment")
 public class PaymentController {
 
-    @Autowired
     private PaymentService paymentService;
-
-    @Autowired
     private OrderService orderService;
-
-    @Autowired
     private UserService userService;
 
     /**
@@ -42,17 +37,14 @@ public class PaymentController {
             @PathVariable Long orderId) {
         try {
             // Kiểm tra người dùng và quyền
-            User user = userService.findUserByJwt(jwt);
+            Long userId = userService.getUserIdFromJwt(jwt);
             Order order = orderService.findOrderById(orderId);
 
-            // Kiểm tra đơn hàng thuộc về người dùng
-            if (!order.getUser().getId().equals(user.getId())) {
+            if(!order.getUserId().equals(userId)){
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Bạn không có quyền truy cập đơn hàng này",
-                                "code", "ORDER_ACCESS_DENIED"));
+                        .body(Map.of("error", "Bạn không có quyền truy cập đơn hàng này"));
             }
 
-            // Tạo URL thanh toán
             String paymentUrl = paymentService.createPayment(orderId);
 
             return ResponseEntity.ok(Map.of(
@@ -60,16 +52,11 @@ public class PaymentController {
                     "message", "Tạo URL thanh toán thành công",
                     "paymentUrl", paymentUrl
             ));
-        } catch (AppException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage(), "code", e.getCode()));
         } catch (Exception e) {
+            log.error("Error creating payment: ", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Lỗi hệ thống khi tạo thanh toán",
-                            "code", "PAYMENT_ERROR",
-                            "message", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -79,50 +66,44 @@ public class PaymentController {
      * @return Thông tin kết quả thanh toán
      */
     @GetMapping("/vnpay-callback")
-    public ResponseEntity<?> vnpayCallbackPost(@RequestParam Map<String, String> params) {
+    public ResponseEntity<?> vnpayCallback(@RequestParam Map<String, String> params) {
         try {
-            // Kiểm tra xem có vnp_TxnRef không trước khi xử lý
-            if (params.get("vnp_TxnRef") == null || params.get("vnp_TxnRef").isEmpty()) {
-                // Log thông tin để debug
-                System.out.println("Missing vnp_TxnRef. Received parameters: " + params);
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Thiếu mã giao dịch vnp_TxnRef",
-                                "code", "MISSING_TXN_REF"));
+            // ✅ LOG để debug
+            log.info("🔔 VNPay callback: txnRef={}, responseCode={}",
+                    params.get("vnp_TxnRef"),
+                    params.get("vnp_ResponseCode"));
+
+            // Validate required params
+            if (params.get("vnp_TxnRef") == null) {
+                log.error("Missing vnp_TxnRef. Params: {}", params.keySet());
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Thiếu mã giao dịch"));
             }
 
+            // Process callback
             PaymentDetail payment = paymentService.processPaymentCallback(params);
-
-            String vnp_ResponseCode = params.get("vnp_ResponseCode");
-            if (vnp_ResponseCode == null) {
-                vnp_ResponseCode = params.get("vnp_TransactionStatus"); // Backup option
-            }
+            String responseCode = params.get("vnp_ResponseCode");
 
             Map<String, Object> response = new HashMap<>();
 
-            if ("00".equals(vnp_ResponseCode)) {
+            if ("00".equals(responseCode)) {
                 response.put("success", true);
                 response.put("message", "Thanh toán thành công");
                 response.put("orderId", payment.getOrder().getId());
                 response.put("paymentId", payment.getId());
-                response.put("transactionId", payment.getTransactionId());
             } else {
                 response.put("success", false);
                 response.put("message", "Thanh toán thất bại");
-                response.put("responseCode", vnp_ResponseCode);
-                response.put("orderId", payment.getOrder().getId());
+                response.put("responseCode", responseCode);
             }
 
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            // Log chi tiết lỗi
-            e.printStackTrace();
 
+        } catch (Exception e) {
+            log.error("❌ Payment callback error: ", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Lỗi hệ thống khi xử lý kết quả thanh toán",
-                            "code", "PAYMENT_CALLBACK_ERROR",
-                            "message", e.getMessage()));
+                    .body(Map.of("error", "Lỗi xử lý thanh toán", "message", e.getMessage()));
         }
     }
 
@@ -134,40 +115,43 @@ public class PaymentController {
      * @return Thông tin thanh toán
      */
     @GetMapping("/order/{orderId}")
-    public ResponseEntity<?> getPaymentByOrderId(
+    public ResponseEntity<?> getPaymentInfo(
             @RequestHeader("Authorization") String jwt,
             @PathVariable Long orderId) {
         try {
-            // Kiểm tra người dùng và quyền
-            User user = userService.findUserByJwt(jwt);
+            Long userId = userService.getUserIdFromJwt(jwt);
             Order order = orderService.findOrderById(orderId);
 
-            // Kiểm tra đơn hàng thuộc về người dùng
-            if (!order.getUser().getId().equals(user.getId())) {
+            // Validate quyền
+            if (!order.getUserId().equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Bạn không có quyền truy cập đơn hàng này",
-                                "code", "ORDER_ACCESS_DENIED"));
+                        .body(Map.of("error", "Bạn không có quyền truy cập"));
             }
 
-            // Lấy thông tin thanh toán
-            PaymentDetail payment = order.getPaymentDetails();
+            // ✅ Sửa tên method
+            PaymentDetail payment = order.getPaymentDetail();
+
             if (payment == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Không tìm thấy thông tin thanh toán",
-                                "code", "PAYMENT_NOT_FOUND"));
+                        .body(Map.of("error", "Chưa có thông tin thanh toán"));
             }
 
-            return ResponseEntity.ok(payment);
-        } catch (AppException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage(), "code", e.getCode()));
+            Map<String, Object> response = new HashMap<>();
+            response.put("paymentId", payment.getId());
+            response.put("paymentMethod", payment.getPaymentMethod());
+            response.put("paymentStatus", payment.getPaymentStatus());
+            response.put("totalAmount", payment.getTotalAmount());
+            response.put("transactionId", payment.getTransactionId());
+            response.put("paymentDate", payment.getPaymentDate());
+            response.put("createdAt", payment.getCreatedAt());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
+            log.error("Error getting payment info: ", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Lỗi hệ thống khi lấy thông tin thanh toán",
-                            "code", "PAYMENT_ERROR",
-                            "message", e.getMessage()));
+                    .body(Map.of("error", "Lỗi lấy thông tin thanh toán"));
         }
     }
 }

@@ -134,6 +134,12 @@ public class CartService {
             throw new AppException("Unauthorized request", HttpStatus.UNAUTHORIZED);
         }
 
+        if (req.getQuantity() <= 0) {
+            cartItemRepository.delete(item);
+            reCalculateCart(cart);
+            return cartRepository.save(cart);
+        }
+
         InventoryCheckRequest checkRequest = new InventoryCheckRequest(
                 item.getProductId(),
                 item.getSize(),

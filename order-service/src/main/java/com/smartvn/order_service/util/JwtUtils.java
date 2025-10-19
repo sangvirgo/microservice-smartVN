@@ -44,7 +44,7 @@ public class JwtUtils {
     public Long getUserIdFromToken(String token) {
         try {
             Claims claims = getClaimsFromToken(token);
-            return ((Number) claims.get("userId")).longValue();
+            return ((Number) claims.get("id")).longValue();
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid or expired JWT token", e);
         }

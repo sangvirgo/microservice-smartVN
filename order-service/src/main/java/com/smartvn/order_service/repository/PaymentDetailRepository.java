@@ -67,4 +67,6 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetail, Lo
             @Param("method") String method,
             @Param("status") String status
     );
+
+    Optional<PaymentDetail> findByTransactionId(String vnp_TxnRef);
 }
