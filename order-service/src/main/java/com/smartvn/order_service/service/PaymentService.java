@@ -6,6 +6,7 @@ import com.smartvn.order_service.enums.PaymentMethod;
 import com.smartvn.order_service.enums.PaymentStatus;
 import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.model.PaymentDetail;
+import com.smartvn.order_service.repository.OrderRepository;
 import com.smartvn.order_service.repository.PaymentDetailRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class PaymentService {
     private String vnp_Returnurl;
 
     private final OrderService orderService;
+    private final OrderRepository  orderRepository;
 
     private final PaymentDetailRepository paymentDetailRepository;
 
@@ -203,12 +205,12 @@ public class PaymentService {
                 payment.setPaymentLog(new Gson().toJson(vnpParams));
                 payment.setVnpResponseCode(vnp_ResponseCode); // ✅ Sửa tên method
 
-                // ✅ THÊM: Update Order
                 order.setPaymentMethod(PaymentMethod.VNPAY);
                 order.setPaymentStatus(PaymentStatus.COMPLETED);
                 order.setOrderStatus(OrderStatus.CONFIRMED); // Tự động confirm đơn
 
                 // ✅ Lưu payment (order sẽ cascade save)
+                orderRepository.save(order);  // Explicit save
                 return paymentDetailRepository.save(payment);
 
             } else {

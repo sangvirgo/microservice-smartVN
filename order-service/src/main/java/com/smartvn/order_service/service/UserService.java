@@ -20,15 +20,14 @@ public class UserService {
     private final UserServiceClient userServiceClient;
 
     public Long getUserIdFromJwt(String jwt) {
-        if(jwt!=null &&  jwt.startsWith("Bearer ")) {
+        if(jwt != null && jwt.startsWith("Bearer ")) {
             jwt = jwt.substring(7);
         }
-
-        String email = jwtUtils.getEmailFromToken(jwt);
 
         if(!jwtUtils.validateToken(jwt)) {
             throw new AppException("Invalid or expired token", HttpStatus.UNAUTHORIZED);
         }
+
         return jwtUtils.getUserIdFromToken(jwt);
     }
 

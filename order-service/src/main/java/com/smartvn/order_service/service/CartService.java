@@ -72,12 +72,6 @@ public class CartService {
             throw new AppException("Product not available", HttpStatus.BAD_REQUEST);
         }
 
-        InventoryCheckRequest checkRequest = new InventoryCheckRequest(req.getProductId(), req.getSize(), req.getQuantity());
-        Boolean hasStock = productServiceClient.checkInventoryAvailability(checkRequest);
-        if(!hasStock) {
-            throw new AppException("Insufficient stock", HttpStatus.BAD_REQUEST);
-        }
-
         List<InventoryDTO> inventoryDTOS = productServiceClient.getProductInventory(req.getProductId());
         InventoryDTO inventoryDTO = inventoryDTOS.stream()
                 .filter(i -> i.getSize().equals(req.getSize()))
@@ -91,7 +85,6 @@ public class CartService {
             CartItem ci = existingItem.get();
             int newTotalQuantity = ci.getQuantity() + req.getQuantity();
 
-            // ✅ CHECK LẠI với tổng quantity mới
             InventoryCheckRequest recheckRequest = new InventoryCheckRequest(
                     req.getProductId(),
                     req.getSize(),

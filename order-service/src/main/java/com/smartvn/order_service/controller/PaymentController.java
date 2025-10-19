@@ -21,9 +21,9 @@ import java.util.Map;
 @RequestMapping("${api.prefix}/payment")
 public class PaymentController {
 
-    private PaymentService paymentService;
-    private OrderService orderService;
-    private UserService userService;
+    private final PaymentService paymentService;
+    private final OrderService orderService;
+    private final UserService userService;
 
     /**
      * Tạo URL thanh toán VNPay cho đơn hàng

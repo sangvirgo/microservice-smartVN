@@ -146,8 +146,12 @@ public class OrderService {
     }
 
     @Transactional
-    public Order cancelOrder(Long orderId) {
+    public Order cancelOrder(Long orderId, Long userId) {
         Order order = findOrderById(orderId);
+
+        if(!order.getUserId().equals(userId)) {
+            throw new AppException("Unauthorized", HttpStatus.FORBIDDEN);
+        }
 
         // Chỉ cho phép hủy nếu PENDING hoặc CONFIRMED
         if (order.getOrderStatus() != OrderStatus.PENDING &&
