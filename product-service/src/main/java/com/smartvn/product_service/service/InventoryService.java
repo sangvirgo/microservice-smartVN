@@ -52,4 +52,35 @@ public class InventoryService {
             inventoryRepository.save(inv);
         }
     }
+
+    public boolean checkInventoryAvailability(InventoryCheckRequest req) {
+        Inventory inv = inventoryRepository.findByProductIdAndSize(req.getProductId(), req.getSize())
+                .orElse(null);
+        return inv != null && inv.getQuantity() >= req.getQuantity();
+    }
+
+    @Transactional
+    public void batchReduceOneInventory(InventoryCheckRequest rq) {
+        Inventory inv = inventoryRepository.findByProductIdAndSize(rq.getProductId(), rq.getSize())
+                .orElseThrow(() -> new AppException("Inventory not found", HttpStatus.NOT_FOUND));
+
+        if(inv.getQuantity() <rq.getQuantity()) {
+            throw new AppException(
+                    String.format("Insufficient stock for product %d size %s",
+                            rq.getProductId(), rq.getSize()),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+        inv.setQuantity(inv.getQuantity() - rq.getQuantity());
+        inventoryRepository.save(inv);
+    }
+
+    @Transactional
+    public void batchRetoreOneInventory(InventoryCheckRequest rq) {
+        Inventory inv = inventoryRepository.findByProductIdAndSize(rq.getProductId(), rq.getSize())
+                .orElseThrow(() -> new AppException("Inventory not found", HttpStatus.NOT_FOUND));
+
+        inv.setQuantity(inv.getQuantity() + rq.getQuantity());
+        inventoryRepository.save(inv);
+    }
 }

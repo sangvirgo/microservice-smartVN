@@ -1,5 +1,6 @@
 package com.smartvn.product_service.dto;
 
+import com.smartvn.product_service.model.Inventory;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.List;
@@ -49,5 +50,13 @@ public class BulkProductRequest {
         private Integer quantity;         // Số lượng tồn kho
         private BigDecimal price;         // Giá gốc
         private Integer discountPercent;  // % giảm giá (0-100)
+
+        public InventoryItemDTO(Inventory inv) {
+            this.size = inv.getSize();
+            this.quantity = inv.getQuantity();
+            this.price = inv.getPrice();
+            this.discountPercent = inv.getDiscountPercent();
+        }
     }
+
 }

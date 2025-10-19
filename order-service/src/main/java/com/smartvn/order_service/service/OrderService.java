@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,18 +72,22 @@ public class OrderService {
                 ))
                 .collect(Collectors.toList());
 
-        for(InventoryCheckRequest inventoryCheckRequest : inventoryCheckRequests) {
-            Boolean hasStock = productServiceClient.checkInventoryAvailability(inventoryCheckRequest);
+        Map<String, Boolean> stockResults = productServiceClient.batchCheckInventory(inventoryCheckRequests);
+
+        for (InventoryCheckRequest req : inventoryCheckRequests) {
+            String key = req.getProductId() + "-" + req.getSize();
+            Boolean hasStock = stockResults.get(key);
+
             if (!hasStock) {
-                // Fetch product info để hiển thị tên sản phẩm cho user-friendly
-                ProductDTO product = productServiceClient.getProductById(inventoryCheckRequest.getProductId());
+                ProductDTO product = productServiceClient.getProductById(req.getProductId());
                 throw new AppException(
                         String.format("Sản phẩm '%s' (size %s) không đủ hàng",
-                                product.getTitle(), inventoryCheckRequest.getSize()),
+                                product.getTitle(), req.getSize()),
                         HttpStatus.BAD_REQUEST
                 );
             }
         }
+
 
         Order order = new Order();
         order.setUserId(userId);
@@ -101,25 +106,15 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // ✅ 10. Reduce inventory cho TẤT CẢ items
-        for (InventoryCheckRequest req : inventoryCheckRequests) {
-            try {
-                productServiceClient.reduceInventory(req);
-            } catch (Exception e) {
-                log.error("Failed to reduce inventory for product {} size {}: {}",
-                        req.getProductId(), req.getSize(), e.getMessage());
-
-                // ⚠️ CRITICAL: Rollback order nếu reduce inventory fail
-                orderRepository.delete(savedOrder);
-
-                // Restore đã reduce (nếu có)
-                // TODO: Implement compensation logic
-
-                throw new AppException(
-                        "Không thể xử lý đơn hàng. Vui lòng thử lại.",
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                );
-            }
+        try {
+            productServiceClient.batchReduceInventory(inventoryCheckRequests);
+        } catch (Exception e) {
+            log.error("Failed to reduce inventory batch: {}", e.getMessage());
+            orderRepository.delete(savedOrder);
+            throw new AppException(
+                    "Không thể xử lý đơn hàng. Vui lòng thử lại.",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
 
         // ✅ 11. Xóa items đã checkout khỏi cart
@@ -127,7 +122,7 @@ public class OrderService {
 
         Cart updatedCart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new AppException("Cart not found", HttpStatus.NOT_FOUND));
-        cartService.reCalculateCart(updatedCart)
+        cartService.reCalculateCart(updatedCart);
         cartRepository.save(updatedCart);
 
         log.info("✅ Order {} created successfully with {} items",

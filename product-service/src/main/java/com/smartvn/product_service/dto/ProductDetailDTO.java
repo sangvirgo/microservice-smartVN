@@ -85,4 +85,32 @@ public class ProductDetailDTO {
         private String reviewContent;
         private String createdAt;
     }
+
+    public ProductDTO toSimpleDTO() {
+        ProductDTO dto = new ProductDTO();
+        dto.setId(this.id);
+        dto.setTitle(this.title);
+        dto.setBrand(this.brand);
+        dto.setDescription(this.description);
+        dto.setColor(this.color);
+        dto.setWeight(this.weight);
+        dto.setIsActive(this.isActive);
+        dto.setImages(this.imageUrls);
+
+        // Lấy giá từ variant đầu tiên (hoặc rẻ nhất)
+        if (priceVariants != null && !priceVariants.isEmpty()) {
+            PriceVariantDTO firstVariant = priceVariants.get(0);
+            dto.setPrice(firstVariant.getPrice());
+            dto.setDiscountedPrice(firstVariant.getDiscountedPrice());
+            dto.setDiscountPercent(firstVariant.getDiscountPercent());
+
+            // Tổng stock
+            dto.setTotalStock(priceVariants.stream()
+                    .mapToInt(PriceVariantDTO::getQuantity)
+                    .sum());
+            dto.setHasStock(dto.getTotalStock() > 0);
+        }
+
+        return dto;
+    }
 }

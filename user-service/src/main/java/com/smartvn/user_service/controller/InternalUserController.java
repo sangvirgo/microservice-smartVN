@@ -1,8 +1,11 @@
 package com.smartvn.user_service.controller;
 
+import com.smartvn.user_service.dto.address.AddressDTO;
 import com.smartvn.user_service.dto.internal.UserInfoDTO;
+import com.smartvn.user_service.model.Address;
 import com.smartvn.user_service.repository.AddressRepository;
 import com.smartvn.user_service.service.user.UserService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,5 +40,13 @@ public class InternalUserController {
 
         boolean isValid=addressRepository.existsByIdAndUserId(addressId, userId);
         return ResponseEntity.ok(isValid);
+    }
+
+    @GetMapping("/addresses/{addressId}")
+    public ResponseEntity<AddressDTO> getAddressById(@PathVariable Long addressId) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new EntityNotFoundException("Address not found"));
+
+        return ResponseEntity.ok(new AddressDTO(address));
     }
 }

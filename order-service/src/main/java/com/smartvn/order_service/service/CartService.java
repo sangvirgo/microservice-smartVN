@@ -89,7 +89,24 @@ public class CartService {
 
         if(existingItem.isPresent()) {
             CartItem ci = existingItem.get();
-            ci.setQuantity(ci.getQuantity() + req.getQuantity());
+            int newTotalQuantity = ci.getQuantity() + req.getQuantity();
+
+            // ✅ CHECK LẠI với tổng quantity mới
+            InventoryCheckRequest recheckRequest = new InventoryCheckRequest(
+                    req.getProductId(),
+                    req.getSize(),
+                    newTotalQuantity  // ← Quan trọng!
+            );
+
+            Boolean hasEnoughStock = productServiceClient.checkInventoryAvailability(recheckRequest);
+            if (!hasEnoughStock) {
+                throw new AppException(
+                        "Không đủ hàng. Tồn kho hiện tại không đủ cho số lượng yêu cầu.",
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            ci.setQuantity(newTotalQuantity);
             cartItemRepository.save(ci);
         } else {
             CartItem ci = new CartItem();
@@ -176,6 +193,7 @@ public class CartService {
         cart.setTotalDiscountedPrice(discountPrice);
         cart.setOriginalPrice(originalPrice);
         cart.setDiscount(originalPrice-discountPrice);
+
     }
 
     @CircuitBreaker(name = "userService", fallbackMethod = "validateUserFallback")

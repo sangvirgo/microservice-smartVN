@@ -1,28 +1,73 @@
 package com.smartvn.product_service.controller;
 
 
+import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.InventoryCheckRequest;
+import com.smartvn.product_service.dto.ProductDTO;
+import com.smartvn.product_service.dto.ProductDetailDTO;
+import com.smartvn.product_service.model.Inventory;
 import com.smartvn.product_service.service.InventoryService;
+import com.smartvn.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("${api.prefix}/internal/inventory")
+@RequestMapping("${api.prefix}/internal")
 public class InternalProductController {
     private final InventoryService  inventoryService;
+    private final ProductService productService;
 
-    @PostMapping("//batch-check")
+    @GetMapping("/products/{productId}")
+    public ResponseEntity<ProductDTO> getProductById(@PathVariable Long productId) {
+        ProductDetailDTO dto = productService.getProductDetail(productId);
+        return ResponseEntity.ok(dto.toSimpleDTO());
+    }
+
+    @GetMapping("/products/{productId}/inventory")
+    public ResponseEntity<List<BulkProductRequest.InventoryItemDTO>> getInventory(@PathVariable Long productId) {
+        List<Inventory> invs = inventoryService.getInventoriesByProduct(productId);
+        List<BulkProductRequest.InventoryItemDTO> dtos = invs.stream()
+                .map(BulkProductRequest.InventoryItemDTO::new)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PostMapping("/inventory/check")
+    public ResponseEntity<Boolean> checkInventoryAvailability(
+            @RequestBody InventoryCheckRequest request) {
+        boolean isValid = inventoryService.checkInventoryAvailability(request);
+
+        return ResponseEntity.ok(isValid);
+    }
+
+    @PostMapping("/inventory/reduce")
+    public ResponseEntity<Void> reduceInventory(
+            @RequestBody InventoryCheckRequest request) {
+
+        inventoryService.batchReduceOneInventory(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/inventory/restore")
+    public ResponseEntity<Void> restoreInventory(
+            @RequestBody InventoryCheckRequest request) {
+
+        inventoryService.batchRetoreOneInventory(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/inventory/batch-check")
     public ResponseEntity<Map<String, Boolean>> batchCheckInventory(
             @RequestBody List<InventoryCheckRequest> requests) {
 
@@ -37,7 +82,7 @@ public class InternalProductController {
         return ResponseEntity.ok(results);
     }
 
-    @PostMapping("/batch-reduce")
+    @PostMapping("/inventory/batch-reduce")
     public ResponseEntity<Void> batchReduceInventory(
             @RequestBody List<InventoryCheckRequest> requests) {
 

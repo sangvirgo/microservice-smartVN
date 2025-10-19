@@ -1,5 +1,6 @@
 package com.smartvn.order_service.config;
 
+import feign.Request;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,5 +21,13 @@ public class FeignClientConfig {
                 template.header("X-API-KEY", internalApiKey);
             }
         };
+    }
+
+    @Bean
+    public Request.Options requestOptions() {
+        return new Request.Options(
+                5000,  // connectTimeout (ms)
+                10000  // readTimeout (ms)
+        );
     }
 }
