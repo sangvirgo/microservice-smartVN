@@ -4,7 +4,6 @@ import com.smartvn.order_service.client.ProductServiceClient;
 import com.smartvn.order_service.client.UserServiceClient;
 import com.smartvn.order_service.dto.cart.AddItemRequest;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
-import com.smartvn.order_service.dto.product.InventoryDTO;
 import com.smartvn.order_service.dto.product.InventoryItemDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.user.UserDTO;
@@ -108,8 +107,8 @@ public class CartService {
             ci.setProductId(req.getProductId());
             ci.setSize(req.getSize());
             ci.setQuantity(req.getQuantity());
-            ci.setPrice(inventoryDTO.getPrice());
-            ci.setDiscountedPrice(inventoryDTO.getDiscountedPrice());
+            ci.setPrice(inventoryItem.getPrice());
+            ci.setDiscountedPrice(inventoryItem.getDiscountedPrice());
             cartItemRepository.save(ci);
         }
 
