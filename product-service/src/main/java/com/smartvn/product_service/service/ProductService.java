@@ -39,51 +39,30 @@ public class ProductService {
     /**
      * Tìm kiếm sản phẩm với khả năng lọc theo tên category (level 1 hoặc level 2)
      */
-    public class ProductSpecifications {
-        public static Specification<Product> hasKeyword(String keyword) {
-            return (root, query, cb) -> {
-                if (keyword == null || keyword.isEmpty()) return null;
-                return cb.like(
-                        cb.lower(root.get("title")),
-                        "%" + keyword.toLowerCase() + "%"
-                );
-            };
+    public Page<ProductListingDTO> searchProducts(
+            String keyword,
+            String topLevelCategory,
+            String secondLevelCategory,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Pageable pageable
+    ) {
+        log.info("Searching products - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
+                keyword, topLevelCategory, secondLevelCategory, minPrice, maxPrice);
+
+        // SỬA ĐỔI: Lấy về danh sách IDs
+        List<Long> categoryIds = resolveCategoryIds(topLevelCategory, secondLevelCategory);
+
+        if (categoryIds != null && categoryIds.isEmpty()) {
+            log.warn("⚠️ Category specified but no matching IDs found for topLevel: {}, secondLevel: {}",
+                    topLevelCategory, secondLevelCategory);
+            return Page.empty(pageable);
         }
 
-        public static Specification<Product> inCategories(List<Long> categoryIds) {
-            return (root, query, cb) -> {
-                if (categoryIds == null || categoryIds.isEmpty()) return null;
-                return root.get("category").get("id").in(categoryIds);
-            };
-        }
-
-        public static Specification<Product> priceBetween(BigDecimal min, BigDecimal max) {
-            return (root, query, cb) -> {
-                Join<Product, Inventory> inventory = root.join("inventories");
-
-                if (min != null && max != null) {
-                    return cb.between(inventory.get("discountedPrice"), min, max);
-                } else if (min != null) {
-                    return cb.greaterThanOrEqualTo(inventory.get("discountedPrice"), min);
-                } else if (max != null) {
-                    return cb.lessThanOrEqualTo(inventory.get("discountedPrice"), max);
-                }
-                return null;
-            };
-        }
+        return productRepository.searchProducts(
+                keyword, categoryIds, minPrice, maxPrice, pageable
+        ).map(this::toListingDTO);
     }
-
-    // Trong ProductService
-    public Page<ProductListingDTO> searchProducts(...) {
-        Specification<Product> spec = Specification.where(ProductSpecifications.isActive())
-                .and(ProductSpecifications.hasKeyword(keyword))
-                .and(ProductSpecifications.inCategories(categoryIds))
-                .and(ProductSpecifications.priceBetween(minPrice, maxPrice));
-
-        return productRepository.findAll(spec, pageable)
-                .map(this::toListingDTO);
-    }
-
     /**
      * Resolve categoryId từ tên category
      * Logic:

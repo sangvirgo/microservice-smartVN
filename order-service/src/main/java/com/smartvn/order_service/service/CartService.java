@@ -5,6 +5,7 @@ import com.smartvn.order_service.client.UserServiceClient;
 import com.smartvn.order_service.dto.cart.AddItemRequest;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.InventoryDTO;
+import com.smartvn.order_service.dto.product.InventoryItemDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.user.UserDTO;
 import com.smartvn.order_service.exceptions.AppException;
@@ -72,8 +73,8 @@ public class CartService {
             throw new AppException("Product not available", HttpStatus.BAD_REQUEST);
         }
 
-        List<InventoryDTO> inventoryDTOS = productServiceClient.getProductInventory(req.getProductId());
-        InventoryDTO inventoryDTO = inventoryDTOS.stream()
+        List<InventoryItemDTO> inventoryDTOS = productServiceClient.getProductInventory(req.getProductId());
+        InventoryItemDTO inventoryItem = inventoryDTOS.stream()
                 .filter(i -> i.getSize().equals(req.getSize()))
                 .findFirst()
                 .orElseThrow(() -> new AppException("Size not found", HttpStatus.NOT_FOUND));

@@ -191,12 +191,12 @@ public class OrderController {
             @RequestHeader("Authorization") String jwt) {
         try {
             Long userId=userService.getUserIdFromJwt(jwt);
-            Order order = orderService.findOrderById(userId);
+            Order order = orderService.findOrderById(orderId);
             if (!order.getUserId().equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error("You don't have permission to cancel this order"));
             }
-            Order cancelledOrder=orderService.cancelOrder(orderId);
+            Order cancelledOrder=orderService.cancelOrder(orderId, userId);
             OrderDTO orderDTO = new OrderDTO(cancelledOrder);
 
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(orderDTO, "Success", null));

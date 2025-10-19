@@ -16,12 +16,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     Optional<User> findByEmail(String email);
-    List<User> findByEmailContainingOrFirstNameContainingOrLastNameContainingAndRoleNameNot(
-            String email, String firstName, String lastName, UserRole roleName, Pageable pageable);
-
-    // Kết hợp tìm kiếm và lọc
-    List<User> findByEmailContainingOrFirstNameContainingOrLastNameContainingAndRoleName(
-            String email, String firstName, String lastName, UserRole roleName, Pageable pageable);
+    @Query("SELECT u FROM User u WHERE " +
+            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND u.role.name != :roleName")
+    List<User> searchUsersExcludingRole(@Param("search") String search,
+                                        @Param("roleName") UserRole roleName,
+                                        Pageable pageable);
 
     @Query("SELECT COUNT(u) FROM User u JOIN u.role r WHERE r.name = :roleName")
     long countByRoleName(@Param("roleName") UserRole roleName);

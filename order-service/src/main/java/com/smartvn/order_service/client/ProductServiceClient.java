@@ -3,6 +3,7 @@ package com.smartvn.order_service.client;
 import com.smartvn.order_service.config.FeignClientConfig;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.InventoryDTO;
+import com.smartvn.order_service.dto.product.InventoryItemDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public interface ProductServiceClient {
      * Lấy danh sách inventory của một sản phẩm
      */
     @GetMapping("${api.prefix}/internal/products/{productId}/inventory")
-    List<InventoryDTO> getProductInventory(@PathVariable("productId") Long productId);
+    List<InventoryItemDTO> getProductInventory(@PathVariable("productId") Long productId);
 
     /**
      * Kiểm tra tồn kho có đủ không
