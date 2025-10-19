@@ -14,7 +14,6 @@ import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.model.OrderItem;
 import com.smartvn.order_service.repository.CartItemRepository;
 import com.smartvn.order_service.repository.CartRepository;
-import com.smartvn.order_service.repository.OrderItemRepository;
 import com.smartvn.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

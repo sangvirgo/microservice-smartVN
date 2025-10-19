@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/products/{productId}/reviews")
+@RequestMapping("${api.prefix}/products/{productId}/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
 

@@ -1,6 +1,7 @@
 package com.smartvn.user_service.controller;
 
 import com.smartvn.user_service.dto.internal.UserInfoDTO;
+import com.smartvn.user_service.repository.AddressRepository;
 import com.smartvn.user_service.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,11 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/internal/users")
+@RequestMapping("${api.prefix}/internal/users")
 @RequiredArgsConstructor
 public class InternalUserController {
 
     private final UserService userService;
+    private final AddressRepository addressRepository;
 
     /**
      * ✅ Lấy thông tin user (cho reviews)
@@ -26,5 +28,14 @@ public class InternalUserController {
 
         UserInfoDTO userInfo = userService.getUserInfo(userId);
         return ResponseEntity.ok(userInfo);
+    }
+
+    @GetMapping("/{userId}/addresses/{addressId}/validate")
+    public ResponseEntity<Boolean> validateUserAddress(
+            @PathVariable Long userId,
+            @PathVariable Long addressId) {
+
+        boolean isValid=addressRepository.existsByIdAndUserId(addressId, userId);
+        return ResponseEntity.ok(isValid);
     }
 }

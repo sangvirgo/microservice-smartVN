@@ -1,9 +1,13 @@
 package com.smartvn.product_service.service;
 
+import com.smartvn.product_service.dto.InventoryCheckRequest;
+import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Inventory;
 import com.smartvn.product_service.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,5 +33,23 @@ public class InventoryService {
         inventory.setPrice(price);
         inventory.setDiscountPercent(discount);
         inventoryRepository.save(inventory);
+    }
+
+    @Transactional
+    public void batchReduceInventory(List<InventoryCheckRequest> requests) {
+        for(InventoryCheckRequest rq: requests) {
+            Inventory inv = inventoryRepository.findByProductIdAndSize(rq.getProductId(), rq.getSize())
+                    .orElseThrow(() -> new AppException("Inventory not found", HttpStatus.NOT_FOUND));
+
+            if(inv.getQuantity() <rq.getQuantity()) {
+                throw new AppException(
+                        String.format("Insufficient stock for product %d size %s",
+                                rq.getProductId(), rq.getSize()),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+            inv.setQuantity(inv.getQuantity() - rq.getQuantity());
+            inventoryRepository.save(inv);
+        }
     }
 }

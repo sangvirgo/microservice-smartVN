@@ -26,7 +26,7 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
-    private final UserServiceClient userServiceClient; // ✅ Thêm
+    private final UserServiceClient userServiceClient;
 
     @Transactional
     public Review createReview(Long userId, Long productId, ReviewRequest reviewRequest) {
