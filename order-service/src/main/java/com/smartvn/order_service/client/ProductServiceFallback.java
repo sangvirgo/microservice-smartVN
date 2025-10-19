@@ -2,6 +2,7 @@ package com.smartvn.order_service.client;
 
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.InventoryDTO;
+import com.smartvn.order_service.dto.product.InventoryItemDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -35,7 +36,7 @@ public class ProductServiceFallback implements ProductServiceClient {
     }
 
     @Override
-    public List<InventoryDTO> getProductInventory(Long productId) {
+    public List<InventoryItemDTO> getProductInventory(Long productId) {
         log.error("Product Service unavailable. Returning empty inventory for productId: {}", productId);
         return new ArrayList<>();
     }

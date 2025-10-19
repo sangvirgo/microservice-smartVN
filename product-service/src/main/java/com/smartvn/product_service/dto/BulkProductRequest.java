@@ -51,6 +51,8 @@ public class BulkProductRequest {
         private BigDecimal price;         // Giá gốc
         private Integer discountPercent;  // % giảm giá (0-100)
 
+        public InventoryItemDTO() {}
+
         public InventoryItemDTO(Inventory inv) {
             this.size = inv.getSize();
             this.quantity = inv.getQuantity();
