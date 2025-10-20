@@ -50,7 +50,10 @@ public class OrderItem {
     // Helper method để tính discount percent
     @Transient
     public Integer getDiscountPercent() {
-        if (price != null && discountedPrice != null && price.compareTo(BigDecimal.ZERO) > 0) {
+        if (price != null && discountedPrice != null
+                && price.compareTo(BigDecimal.ZERO) > 0
+                && discountedPrice.compareTo(price) < 0) {
+
             BigDecimal discount = price.subtract(discountedPrice);
             return discount.multiply(BigDecimal.valueOf(100))
                     .divide(price, 0, BigDecimal.ROUND_HALF_UP)

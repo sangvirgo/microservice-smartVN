@@ -89,23 +89,30 @@ public class Order {
 
     // Helper methods
     public void calculateTotals() {
+        // 1. Tổng số items
         this.totalItems = orderItems.stream()
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
 
+        // 2. Giá gốc (chưa giảm)
         this.originalPrice = orderItems.stream()
                 .mapToInt(item -> item.getPrice().intValue() * item.getQuantity())
                 .sum();
 
+        // 3. Giá sau giảm
         this.totalDiscountedPrice = orderItems.stream()
                 .mapToInt(item -> {
-                    BigDecimal itemPrice = item.getDiscountedPrice() != null ?
-                            item.getDiscountedPrice() : item.getPrice();
+                    BigDecimal itemPrice = (item.getDiscountedPrice() != null && item.getDiscountedPrice().compareTo(BigDecimal.ZERO) > 0)
+                            ? item.getDiscountedPrice()
+                            : item.getPrice();
                     return itemPrice.intValue() * item.getQuantity();
                 })
                 .sum();
 
+        // 4. Tính discount
         this.discount = originalPrice - totalDiscountedPrice;
+
+        // 5. totalPrice = giá sau giảm (dùng cho thanh toán)
         this.totalPrice = BigDecimal.valueOf(totalDiscountedPrice);
     }
 }

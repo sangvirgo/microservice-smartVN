@@ -184,25 +184,35 @@ public class CartService {
     public void reCalculateCart(Cart cart) {
         List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
 
+        // 1. Tổng số lượng items
         int totalItems = items.stream()
-                .mapToInt(CartItem::getQuantity).sum();
+                .mapToInt(CartItem::getQuantity)
+                .sum();
 
+        // 2. Tổng giá GỐC (chưa giảm)
         int originalPrice = items.stream()
-                .mapToInt(item -> item.getPrice().intValue() * item.getQuantity()).sum();
+                .mapToInt(item -> item.getPrice().intValue() * item.getQuantity())
+                .sum();
 
-        int discountPrice = items.stream()
+        // 3. Tổng giá SAU GIẢM
+        int totalDiscountedPrice = items.stream()
                 .mapToInt(item -> {
-                    // Nếu giá giảm là null, thì dùng giá gốc
-                    BigDecimal priceToUse = item.getDiscountedPrice() != null
+                    // Nếu có giá giảm thì dùng, không thì dùng giá gốc
+                    BigDecimal priceToUse = (item.getDiscountedPrice() != null && item.getDiscountedPrice().compareTo(BigDecimal.ZERO) > 0)
                             ? item.getDiscountedPrice()
                             : item.getPrice();
                     return priceToUse.intValue() * item.getQuantity();
-                }).sum();
+                })
+                .sum();
 
+        // 4. Tính discount = gốc - giảm
+        int discount = originalPrice - totalDiscountedPrice;
+
+        // 5. Set vào cart
         cart.setTotalItems(totalItems);
-        cart.setTotalDiscountedPrice(discountPrice);
         cart.setOriginalPrice(originalPrice);
-        cart.setDiscount(originalPrice - discountPrice);
+        cart.setTotalDiscountedPrice(totalDiscountedPrice);
+        cart.setDiscount(discount);
     }
 
     @CircuitBreaker(name = "userService", fallbackMethod = "validateUserFallback")

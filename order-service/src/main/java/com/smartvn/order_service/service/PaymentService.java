@@ -19,6 +19,8 @@ import com.google.gson.Gson;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -69,7 +71,10 @@ public class PaymentService {
             String vnp_OrderInfo = "Thanh toan don hang #" + orderId;
             String vnp_OrderType = "other"; // Thay đổi từ "billpayment" sang "other"
             String vnp_IpAddr = getIpAddress();
-            long amount = order.getTotalPrice().longValue() * 100L;
+            long amount = order.getTotalPrice()
+                    .setScale(0, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .longValue();
 
             // Tạo map các tham số
             Map<String, String> vnp_Params = new HashMap<>();

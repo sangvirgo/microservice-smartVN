@@ -38,6 +38,15 @@ public class CartController {
             Long userId = userService.getUserIdFromJwt(jwt);
             Cart cart = cartService.getCart(userId);
             CartDTO cartDTO =new CartDTO(cart);
+
+            for(CartItemDTO ciDTO: cartDTO.getCartItems()) {
+                try {
+                    ProductDTO productDTO = productServiceClient.getProductById(ciDTO.getProductId());
+                    ciDTO.enrichWithProductInfo(productDTO);
+                }  catch (AppException e) {
+                    log.error("Lỗi khi lấy thông tin sản phẩm {}: {}", ciDTO.getProductId(), e.getMessage());
+                }
+            }
             return new ResponseEntity<>(cartDTO, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity
