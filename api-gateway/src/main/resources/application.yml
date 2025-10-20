@@ -10,8 +10,8 @@ spring:
     import: "optional:configserver:http://config-server:8888"
   cloud:
     gateway:
-      routes:  # ← KHÔNG phải server.webflux.routes
-# === OAuth2 Route (ƯU TIÊN CAO NHẤT) ===
+      routes:
+        # === OAuth2 Route (ƯU TIÊN CAO NHẤT) ===
         - id: oauth2-route
           uri: lb://user-service
           predicates:
@@ -43,7 +43,7 @@ spring:
           predicates:
             - Path=/api/v1/cart/**, /api/v1/orders/**, /api/v1/payment/**
           filters:
-            - StripPrefix=0  # ← Sửa từ 2 thành 0
+            - StripPrefix=0
             - Authentication
 
         # === 4. Admin Service Route ===
@@ -52,10 +52,10 @@ spring:
           predicates:
             - Path=/api/v1/admin/**
           filters:
-            - StripPrefix=0  # ← Sửa từ 2 thành 0
+            - StripPrefix=0
             - Authentication
 
-      globalcors:  # ← CẤP CÙNG VỚI routes, KHÔNG phải trong webflux
+      globalcors:
         cors-configurations:
           '[/**]':
             allowed-origins:
@@ -63,6 +63,8 @@ spring:
               - "http://localhost:5174"
               - "http://localhost:5175"
               - "https://*.vercel.app"
+              # ✅ Thêm VNPay origin nếu cần (thường không cần vì VNPay redirect)
+              - "https://sandbox.vnpayment.vn"
             allowed-methods:
               - "GET"
               - "POST"
@@ -82,3 +84,8 @@ eureka:
     register-with-eureka: true
   instance:
     prefer-ip-address: true
+
+# ✅ Thêm JWT secret nếu chưa có
+auth:
+  token:
+    jwtSecret: VLOQmJ8TkXNXxN5b4cw2sjdRj4M0Amh1GjCNGZj59xLOvC1ojGUQnFcYbghvJgQRaFcYfHEqIyg8M1PZmr9A

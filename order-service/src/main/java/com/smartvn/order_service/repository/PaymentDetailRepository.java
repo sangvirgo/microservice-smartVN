@@ -1,5 +1,7 @@
 package com.smartvn.order_service.repository;
 
+import com.smartvn.order_service.enums.PaymentMethod;
+import com.smartvn.order_service.enums.PaymentStatus;
 import com.smartvn.order_service.model.PaymentDetail;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,12 +27,14 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetail, Lo
     /**
      * Tìm payment details theo payment method
      */
-    List<PaymentDetail> findByPaymentMethod(String paymentMethod);
+    // ✅ SỬA: Thay String bằng PaymentMethod
+    List<PaymentDetail> findByPaymentMethod(PaymentMethod paymentMethod);
 
     /**
      * Tìm payment details theo payment status
      */
-    List<PaymentDetail> findByPaymentStatus(String paymentStatus);
+    // ✅ SỬA: Thay String bằng PaymentStatus
+    List<PaymentDetail> findByPaymentStatus(PaymentStatus paymentStatus);
 
     /**
      * Tìm payment details trong khoảng thời gian
@@ -55,17 +59,19 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetail, Lo
     /**
      * Đếm số lượng payment theo method
      */
+    // ✅ SỬA: Thay String bằng PaymentMethod
     @Query("SELECT COUNT(pd) FROM PaymentDetail pd WHERE pd.paymentMethod = :method")
-    Long countByPaymentMethod(@Param("method") String method);
+    Long countByPaymentMethod(@Param("method") PaymentMethod method);
 
     /**
      * Tính tổng tiền theo payment method và status
      */
+    // ✅ SỬA: Thay String bằng PaymentMethod và PaymentStatus
     @Query("SELECT COALESCE(SUM(pd.totalAmount), 0) FROM PaymentDetail pd " +
             "WHERE pd.paymentMethod = :method AND pd.paymentStatus = :status")
     Double sumTotalAmountByMethodAndStatus(
-            @Param("method") String method,
-            @Param("status") String status
+            @Param("method") PaymentMethod method,
+            @Param("status") PaymentStatus status
     );
 
     Optional<PaymentDetail> findByTransactionId(String vnp_TxnRef);

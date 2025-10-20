@@ -2,15 +2,20 @@ package com.smartvn.order_service.controller;
 
 
 
+import com.smartvn.order_service.client.ProductServiceClient;
 import com.smartvn.order_service.dto.cart.AddItemRequest;
 import com.smartvn.order_service.dto.cart.CartDTO;
+import com.smartvn.order_service.dto.cart.CartItemDTO;
+import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.response.ApiResponse;
 
 import com.smartvn.order_service.exceptions.AppException;
 import com.smartvn.order_service.model.Cart;
+import com.smartvn.order_service.model.CartItem;
 import com.smartvn.order_service.service.CartService;
 import com.smartvn.order_service.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +25,12 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @RequestMapping("${api.prefix}/cart")
 public class CartController {
     private final CartService cartService;
     private final UserService userService;
+    private final ProductServiceClient productServiceClient;
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyCart(@RequestHeader("Authorization") String jwt) {
@@ -57,12 +64,19 @@ public class CartController {
             }
 
             Long userId = userService.getUserIdFromJwt(jwt);
-            Cart cart = cartService.addCartItem(userId, req);
-            CartDTO cartDTO = new CartDTO(cart);
+            CartItem savedItem = cartService.addCartItem(userId, req);
+            CartItemDTO cartItemDTO = new CartItemDTO(savedItem);
+
+            try {
+                ProductDTO product = productServiceClient.getProductById(cartItemDTO.getProductId());
+                cartItemDTO.enrichWithProductInfo(product);
+            } catch (Exception e) {
+                log.error("Lỗi khi lấy thông tin sản phẩm {}: {}", cartItemDTO.getProductId(), e.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of(
                     "message", "Item added successfully",
-                    "cart", cartDTO
+                    "cart", cartItemDTO
             ));
         } catch (AppException e) {
             return ResponseEntity

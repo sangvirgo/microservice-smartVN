@@ -69,25 +69,28 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
         String path = request.getURI().getPath();
         HttpMethod method = request.getMethod();
 
-        // Auth endpoints - tất cả methods
+        // ✅ 1. Auth endpoints
         if (path.startsWith("/api/v1/auth/")) {
             return true;
         }
 
-            // OAuth2 endpoints - QUAN TRỌNG
-        if (path.startsWith("/oauth2/")) {
-            return true;
-        }
-        
-        if (path.startsWith("/login/oauth2/")) {
+        // ✅ 2. OAuth2 endpoints
+        if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
             return true;
         }
 
+        // ✅ 3. VNPay Callback - QUAN TRỌNG!
+        // VNPay gọi callback từ server của họ, không có JWT
+        if (path.equals("/api/v1/payment/vnpay-callback") && HttpMethod.GET.equals(method)) {
+            return true;
+        }
+
+        // ✅ 4. Create multiple products (admin tool)
         if (path.equals("/api/v1/products/create-multiple") && HttpMethod.POST.equals(method)) {
             return true;
         }
 
-        // Products, categories, reviews - chỉ GET
+        // ✅ 5. Products, categories, reviews - GET only
         if (path.startsWith("/api/v1/products") && HttpMethod.GET.equals(method)) {
             return true;
         }
@@ -100,7 +103,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             return true;
         }
 
-        // Health check
+        // ✅ 6. Health check
         if (path.startsWith("/actuator/health")) {
             return true;
         }

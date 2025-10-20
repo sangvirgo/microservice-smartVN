@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,7 +66,7 @@ public class CartService {
     }
 
     @Transactional
-    public Cart addCartItem(Long userId, AddItemRequest req) {
+    public CartItem addCartItem(Long userId, AddItemRequest req) { // ✅ SỬA: Thay đổi kiểu trả về từ Cart sang CartItem
         Cart cart = getOrCreateCart(userId);
         ProductDTO dto = productServiceClient.getProductById(req.getProductId());
         if(dto == null || !dto.getIsActive()) {
@@ -78,8 +79,10 @@ public class CartService {
                 .findFirst()
                 .orElseThrow(() -> new AppException("Size not found", HttpStatus.NOT_FOUND));
 
-        Optional<CartItem> existingItem = cartRepository
+        Optional<CartItem> existingItem = cartItemRepository
                 .findByCartIdAndProductIdAndSize(cart.getId(), req.getProductId(), req.getSize());
+
+        CartItem savedItem; // Biến để lưu CartItem sẽ được trả về
 
         if(existingItem.isPresent()) {
             CartItem ci = existingItem.get();
@@ -88,7 +91,7 @@ public class CartService {
             InventoryCheckRequest recheckRequest = new InventoryCheckRequest(
                     req.getProductId(),
                     req.getSize(),
-                    newTotalQuantity  // ← Quan trọng!
+                    newTotalQuantity
             );
 
             Boolean hasEnoughStock = productServiceClient.checkInventoryAvailability(recheckRequest);
@@ -100,7 +103,7 @@ public class CartService {
             }
 
             ci.setQuantity(newTotalQuantity);
-            cartItemRepository.save(ci);
+            savedItem = cartItemRepository.save(ci); // Gán item đã được cập nhật
         } else {
             CartItem ci = new CartItem();
             ci.setCart(cart);
@@ -109,11 +112,13 @@ public class CartService {
             ci.setQuantity(req.getQuantity());
             ci.setPrice(inventoryItem.getPrice());
             ci.setDiscountedPrice(inventoryItem.getDiscountedPrice());
-            cartItemRepository.save(ci);
+            savedItem = cartItemRepository.save(ci); // Gán item mới được tạo
         }
 
-        reCalculateCart(cart);
-        return cartRepository.save(cart);
+        reCalculateCart(cart); // Vẫn tính toán lại toàn bộ giỏ hàng
+        cartRepository.save(cart);
+
+        return savedItem; // ✅ SỬA: Trả về CartItem cụ thể
     }
 
     @Transactional
@@ -186,13 +191,18 @@ public class CartService {
                 .mapToInt(item -> item.getPrice().intValue() * item.getQuantity()).sum();
 
         int discountPrice = items.stream()
-                .mapToInt(item -> item.getDiscountedPrice().intValue() * item.getQuantity()).sum();
+                .mapToInt(item -> {
+                    // Nếu giá giảm là null, thì dùng giá gốc
+                    BigDecimal priceToUse = item.getDiscountedPrice() != null
+                            ? item.getDiscountedPrice()
+                            : item.getPrice();
+                    return priceToUse.intValue() * item.getQuantity();
+                }).sum();
 
         cart.setTotalItems(totalItems);
         cart.setTotalDiscountedPrice(discountPrice);
         cart.setOriginalPrice(originalPrice);
-        cart.setDiscount(originalPrice-discountPrice);
-
+        cart.setDiscount(originalPrice - discountPrice);
     }
 
     @CircuitBreaker(name = "userService", fallbackMethod = "validateUserFallback")
@@ -203,8 +213,11 @@ public class CartService {
             if(user == null) {
                 throw new AppException("User not found", HttpStatus.NOT_FOUND);
             }
-            if(user.getIsBanned()) {
+            if (Boolean.TRUE.equals(user.getIsBanned())) {
                 throw new AppException("User is already banned", HttpStatus.FORBIDDEN);
+            }
+            if (Boolean.FALSE.equals(user.getActive())) {
+                throw new AppException("User account is not active", HttpStatus.FORBIDDEN);
             }
         } catch (FeignException.NotFound e) {
             throw new AppException("User not found", HttpStatus.NOT_FOUND);
