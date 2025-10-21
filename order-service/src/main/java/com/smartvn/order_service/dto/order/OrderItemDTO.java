@@ -5,9 +5,11 @@ import com.smartvn.order_service.model.OrderItem;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 
+@Slf4j
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -47,6 +49,8 @@ public class OrderItemDTO {
         if (product != null) {
             this.productTitle = product.getTitle();
             this.imageUrl = product.getFirstImageUrl();
+        } else {
+            log.info("product is null");
         }
     }
 }

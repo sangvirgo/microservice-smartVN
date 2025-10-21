@@ -26,7 +26,7 @@ public interface UserServiceClient {
     /**
      * Lấy thông tin địa chỉ
      */
-    @GetMapping("/api/v1/internal/addresses/{addressId}")
+    @GetMapping("/api/v1/internal/users/addresses/{addressId}")
     AddressDTO getAddressById(@PathVariable("addressId") Long addressId);
 
     /**

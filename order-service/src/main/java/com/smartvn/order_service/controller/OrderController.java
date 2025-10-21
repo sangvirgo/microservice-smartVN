@@ -57,6 +57,7 @@ public class OrderController {
             for (OrderDTO dto : orderDTOS) {
                 enrichOrderDTO(dto);
             }
+
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
             response.put("messages", "Successfully retrieved order history");
@@ -146,6 +147,7 @@ public class OrderController {
     public ResponseEntity<OrderDTO> findOrderById(@PathVariable("id") Long orderId) {
         Order order = orderService.findOrderById(orderId);
         OrderDTO orderDTO = new OrderDTO(order);
+        enrichOrderDTO(orderDTO);
         return new ResponseEntity<>(orderDTO, HttpStatus.OK);
     }
 

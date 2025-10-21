@@ -26,7 +26,7 @@ public class OrderDTO {
     private LocalDateTime deliveryDate;
     private Integer originalPrice;
     private Long shippingAddressId;
-    private AddressDTO shippingAddress; // Sẽ được enrich sau
+    private AddressDTO shippingAddress;
     private PaymentStatus paymentStatus;
     private PaymentMethod paymentMethod;
     private List<OrderItemDTO> orderItems;
