@@ -50,6 +50,7 @@ public class BulkProductRequest {
         private Integer quantity;         // Số lượng tồn kho
         private BigDecimal price;         // Giá gốc
         private Integer discountPercent;  // % giảm giá (0-100)
+        private BigDecimal discountedPrice;
 
         public InventoryItemDTO() {}
 
@@ -58,6 +59,7 @@ public class BulkProductRequest {
             this.quantity = inv.getQuantity();
             this.price = inv.getPrice();
             this.discountPercent = inv.getDiscountPercent();
+            this.discountedPrice = inv.getDiscountedPrice();
         }
     }
 
