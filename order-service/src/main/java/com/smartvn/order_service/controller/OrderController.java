@@ -165,7 +165,7 @@ public class OrderController {
             if(orders.isEmpty() || orders==null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
-                                "mess", "Không có đơn hàng với trạng thái "+ orderStatus,
+                                "message", "Không có đơn hàng với trạng thái "+ orderStatus,
                                 "code", "EMPTY_ORDER"
                         ));
             }

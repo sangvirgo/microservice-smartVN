@@ -50,18 +50,32 @@ public class ProductService {
         log.info("Searching products - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
                 keyword, topLevelCategory, secondLevelCategory, minPrice, maxPrice);
 
-        // SỬA ĐỔI: Lấy về danh sách IDs
         List<Long> categoryIds = resolveCategoryIds(topLevelCategory, secondLevelCategory);
 
-        if (categoryIds != null && categoryIds.isEmpty()) {
-            log.warn("⚠️ Category specified but no matching IDs found for topLevel: {}, secondLevel: {}",
-                    topLevelCategory, secondLevelCategory);
+        // ✅ Nếu có filter category nhưng không tìm thấy ID -> empty
+        boolean hasCategoryFilter = (topLevelCategory != null && !topLevelCategory.trim().isEmpty())
+                || (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty());
+
+        if (hasCategoryFilter && (categoryIds == null || categoryIds.isEmpty())) {
+            log.warn("⚠️ Category filter applied but no IDs found");
             return Page.empty(pageable);
         }
 
-        return productRepository.searchProducts(
-                keyword, categoryIds, minPrice, maxPrice, pageable
-        ).map(this::toListingDTO);
+        // ✅ Gọi đúng method tùy theo có categoryIds hay không
+        Page<Product> productPage;
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            log.info("🔍 Searching WITH category filter: {}", categoryIds);
+            productPage = productRepository.searchProductsWithCategory(
+                    keyword, categoryIds, minPrice, maxPrice, pageable
+            );
+        } else {
+            log.info("🔍 Searching WITHOUT category filter");
+            productPage = productRepository.searchProductsWithoutCategory(
+                    keyword, minPrice, maxPrice, pageable
+            );
+        }
+
+        return productPage.map(this::toListingDTO);
     }
     /**
      * Resolve categoryId từ tên category
@@ -93,7 +107,7 @@ public class ProductService {
                     .orElse(Collections.emptyList());
         }
 
-        return null; // Không lọc theo category
+        return Collections.emptyList();
     }
 
     public ProductDetailDTO getProductDetail(Long productId) {
@@ -166,7 +180,7 @@ public class ProductService {
         }
 
         // Tính toán giá và tình trạng kho từ inventory
-        List<Inventory> inventories = inventoryService.getInventoriesByProduct(product.getId());
+        List<Inventory> inventories = product.getInventories();
         if (!inventories.isEmpty()) {
             BigDecimal minPrice = inventories.stream().map(Inventory::getPrice).min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
             BigDecimal maxPrice = inventories.stream().map(Inventory::getPrice).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
