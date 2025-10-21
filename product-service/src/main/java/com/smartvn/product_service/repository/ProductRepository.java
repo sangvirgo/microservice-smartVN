@@ -24,7 +24,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
      * Query chính để tìm kiếm và lọc sản phẩm.
      * Query này JOIN với Inventory để lọc theo giá real-time.
      */
-    @Query(value = "SELECT DISTINCT p.* FROM products p " +
+    @Query(value = "SELECT DISTINCT p.id FROM products p " +
             "WHERE p.is_active = true " +
             "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND p.category_id IN (:categoryIds) " +  // ← Bỏ check NULL ở đây
@@ -48,7 +48,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             Pageable pageable
     );
 
-    @Query(value = "SELECT DISTINCT p.* FROM products p " +
+    @Query(value = "SELECT DISTINCT p.id FROM products p " +
             "WHERE p.is_active = true " +
             "AND (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             // ← Không có filter category
