@@ -165,8 +165,8 @@ public class OrderController {
             if(orders.isEmpty() || orders==null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
-                                "error", "Cannot create order. Cart might be empty.",
-                                "code", "EMPTY_CART"
+                                "mess", "Không có đơn hàng với trạng thái "+ orderStatus,
+                                "code", "EMPTY_ORDER"
                         ));
             }
             List<OrderDTO> orderDTOS = orders.stream()
