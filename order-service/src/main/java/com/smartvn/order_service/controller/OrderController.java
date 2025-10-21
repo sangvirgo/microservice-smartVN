@@ -93,6 +93,14 @@ public class OrderController {
                         ));
             }
 
+            if(request.getAddressId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "error", "Vui lòng chọn địa chỉ để đặt hàng",
+                                "code", "NO_ADDRESS_SELECTED"
+                        ));
+            }
+
             Order order = orderService.placeOrder(
                     userId,
                     request.getAddressId(),

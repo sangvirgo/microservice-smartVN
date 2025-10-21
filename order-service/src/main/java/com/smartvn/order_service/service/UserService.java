@@ -44,11 +44,11 @@ public class UserService {
                 throw new AppException("User not found", HttpStatus.NOT_FOUND);
             }
 
-            if (user.getIsBanned()) {
+            if (user.isBanned()) {
                 throw new AppException("User is banned", HttpStatus.FORBIDDEN);
             }
 
-            if (!user.getActive()) {
+            if (!user.isActive()) {
                 throw new AppException("User account is not active", HttpStatus.FORBIDDEN);
             }
 

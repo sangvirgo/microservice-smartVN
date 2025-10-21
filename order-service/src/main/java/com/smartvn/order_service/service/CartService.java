@@ -167,6 +167,7 @@ public class CartService {
 
         cartItemRepository.delete(item);
         reCalculateCart(cart);
+        cartRepository.save(cart);
     }
 
     @Transactional  // Thêm annotation này
@@ -223,10 +224,10 @@ public class CartService {
             if(user == null) {
                 throw new AppException("User not found", HttpStatus.NOT_FOUND);
             }
-            if (Boolean.TRUE.equals(user.getIsBanned())) {
+            if (Boolean.TRUE.equals(user.isBanned())) {
                 throw new AppException("User is already banned", HttpStatus.FORBIDDEN);
             }
-            if (Boolean.FALSE.equals(user.getActive())) {
+            if (Boolean.FALSE.equals(user.isActive())) {
                 throw new AppException("User account is not active", HttpStatus.FORBIDDEN);
             }
         } catch (FeignException.NotFound e) {

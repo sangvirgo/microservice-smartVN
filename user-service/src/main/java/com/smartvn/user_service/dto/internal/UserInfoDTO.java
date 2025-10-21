@@ -13,6 +13,8 @@ public class UserInfoDTO {
     private String lastName;
     private String email;
     private String avatar;
+    private boolean isActive;
+    private boolean isBanned;
 
     public String getFullName() {
         return firstName + " " + lastName;

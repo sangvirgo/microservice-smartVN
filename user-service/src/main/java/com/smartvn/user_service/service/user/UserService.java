@@ -160,7 +160,9 @@ public class UserService implements IUserService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getEmail(),
-                user.getImageUrl()
+                user.getImageUrl(),
+                user.isActive(),
+                user.isBanned()
         );
     }
 }

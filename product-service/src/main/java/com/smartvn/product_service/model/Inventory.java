@@ -91,7 +91,7 @@ public class Inventory {
             BigDecimal discount = price.multiply(BigDecimal.valueOf(discountPercent / 100.0));
             this.discountedPrice = price.subtract(discount).setScale(0, RoundingMode.HALF_UP);
         } else if (price != null) {
-            this.discountedPrice = price;
+            this.discountedPrice = price; // ✅ THÊM dòng này
         }
     }
 

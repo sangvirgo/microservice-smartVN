@@ -95,6 +95,7 @@ public class OrderService {
         order.setOrderStatus(OrderStatus.PENDING);
         order.setPaymentMethod(PaymentMethod.COD);
         order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setShippingAddressId(addressId);
 
         List<OrderItem> orderItems = selectedItems.stream()
                 .map(this::convertToOrderItem)
