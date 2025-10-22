@@ -47,35 +47,45 @@ public class ProductService {
             BigDecimal maxPrice,
             Pageable pageable
     ) {
-        log.info("Searching products - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
+        log.info("🔍 Searching - keyword: {}, topLevel: {}, secondLevel: {}, price: {}-{}",
                 keyword, topLevelCategory, secondLevelCategory, minPrice, maxPrice);
 
+        // 1. Resolve category IDs
         List<Long> categoryIds = resolveCategoryIds(topLevelCategory, secondLevelCategory);
 
-        // ✅ Nếu có filter category nhưng không tìm thấy ID -> empty
+        // 2. Nếu có filter category nhưng không tìm thấy -> trả về empty
         boolean hasCategoryFilter = (topLevelCategory != null && !topLevelCategory.trim().isEmpty())
                 || (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty());
 
         if (hasCategoryFilter && (categoryIds == null || categoryIds.isEmpty())) {
-            log.warn("⚠️ Category filter applied but no IDs found");
+            log.warn("⚠️ Category not found");
             return Page.empty(pageable);
         }
 
-        // ✅ Gọi đúng method tùy theo có categoryIds hay không
-        Page<Product> productPage;
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            log.info("🔍 Searching WITH category filter: {}", categoryIds);
-            productPage = productRepository.searchProductsWithCategory(
-                    keyword, categoryIds, minPrice, maxPrice, pageable
-            );
-        } else {
-            log.info("🔍 Searching WITHOUT category filter");
-            productPage = productRepository.searchProductsWithoutCategory(
-                    keyword, minPrice, maxPrice, pageable
-            );
-        }
+        // 3. Query products
+        Page<Product> productPage = productRepository.searchProducts(
+                keyword,
+                categoryIds.isEmpty() ? null : categoryIds, // ✅ Truyền null nếu không filter
+                pageable
+        );
 
-        return productPage.map(this::toListingDTO);
+        // 4. Filter theo giá (in-memory vì giá dynamic)
+        return productPage.map(product -> {
+            ProductListingDTO dto = toListingDTO(product);
+            // Filter theo price range
+            if (minPrice != null || maxPrice != null) {
+                boolean matchPrice = product.getInventories().stream()
+                        .anyMatch(inv -> {
+                            BigDecimal price = inv.getDiscountedPrice();
+                            boolean match = true;
+                            if (minPrice != null) match = match && price.compareTo(minPrice) >= 0;
+                            if (maxPrice != null) match = match && price.compareTo(maxPrice) <= 0;
+                            return match;
+                        });
+                return matchPrice ? dto : null;
+            }
+            return dto;
+        }).filter(dto -> dto != null); // ✅ Bỏ các null sau khi filter giá
     }
     /**
      * Resolve categoryId từ tên category
@@ -85,28 +95,45 @@ public class ProductService {
      * 3. Nếu không có cả hai -> return null (không filter theo category)
      */
     private List<Long> resolveCategoryIds(String topLevelCategory, String secondLevelCategory) {
+        // Case 1: Có secondLevel -> tìm category cấp 2
         if (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty()) {
+            log.debug("🔎 Looking for second level category: {}", secondLevelCategory);
             return categoryRepository.findByName(secondLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 2)
-                    .map(cat -> Collections.singletonList(cat.getId()))
-                    .orElse(Collections.emptyList());
+                    .map(cat -> {
+                        log.info("✅ Found category ID: {}", cat.getId());
+                        return Collections.singletonList(cat.getId());
+                    })
+                    .orElseGet(() -> {
+                        log.warn("⚠️ Second level category '{}' not found", secondLevelCategory);
+                        return Collections.emptyList();
+                    });
         }
 
+        // Case 2: Chỉ có topLevel -> lấy parent + tất cả children
         if (topLevelCategory != null && !topLevelCategory.trim().isEmpty()) {
+            log.debug("🔎 Looking for top level category: {}", topLevelCategory);
             return categoryRepository.findByName(topLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 1)
                     .map(parent -> {
                         List<Long> ids = new ArrayList<>();
-                        // Thêm ID của chính nó (dù ít khả năng sản phẩm gán trực tiếp vào đây)
-                        ids.add(parent.getId());
+                        ids.add(parent.getId()); // Parent ID
                         if (parent.getSubCategories() != null) {
-                            ids.addAll(parent.getSubCategories().stream().map(Category::getId).collect(Collectors.toList()));
+                            ids.addAll(parent.getSubCategories().stream()
+                                    .map(Category::getId)
+                                    .collect(Collectors.toList()));
                         }
+                        log.info("✅ Found {} category IDs for '{}'", ids.size(), topLevelCategory);
                         return ids;
                     })
-                    .orElse(Collections.emptyList());
+                    .orElseGet(() -> {
+                        log.warn("⚠️ Top level category '{}' not found", topLevelCategory);
+                        return Collections.emptyList();
+                    });
         }
 
+        // Case 3: Không filter category
+        log.debug("ℹ️ No category filter applied");
         return Collections.emptyList();
     }
 
