@@ -8,6 +8,7 @@ import com.smartvn.product_service.repository.CategoryRepository;
 import com.smartvn.product_service.repository.ImageRepository;
 import com.smartvn.product_service.repository.InventoryRepository;
 import com.smartvn.product_service.repository.ProductRepository;
+import com.smartvn.product_service.specification.ProductSpecification;
 import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,30 +63,18 @@ public class ProductService {
             return Page.empty(pageable);
         }
 
-        // 3. Query products
-        Page<Product> productPage = productRepository.searchProducts(
+        // 3. ✅ SỬ DỤNG SPECIFICATION để query (bao gồm cả price filter)
+        Specification<Product> spec = ProductSpecification.searchProducts(
                 keyword,
-                categoryIds.isEmpty() ? null : categoryIds, // ✅ Truyền null nếu không filter
-                pageable
+                categoryIds.isEmpty() ? null : categoryIds,
+                minPrice,
+                maxPrice
         );
 
-        // 4. Filter theo giá (in-memory vì giá dynamic)
-        return productPage.map(product -> {
-            ProductListingDTO dto = toListingDTO(product);
-            // Filter theo price range
-            if (minPrice != null || maxPrice != null) {
-                boolean matchPrice = product.getInventories().stream()
-                        .anyMatch(inv -> {
-                            BigDecimal price = inv.getDiscountedPrice();
-                            boolean match = true;
-                            if (minPrice != null) match = match && price.compareTo(minPrice) >= 0;
-                            if (maxPrice != null) match = match && price.compareTo(maxPrice) <= 0;
-                            return match;
-                        });
-                return matchPrice ? dto : null;
-            }
-            return dto;
-        }).filter(dto -> dto != null); // ✅ Bỏ các null sau khi filter giá
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        // 4. ✅ Chỉ cần map sang DTO, không cần filter nữa
+        return productPage.map(this::toListingDTO);
     }
     /**
      * Resolve categoryId từ tên category
@@ -95,13 +84,14 @@ public class ProductService {
      * 3. Nếu không có cả hai -> return null (không filter theo category)
      */
     private List<Long> resolveCategoryIds(String topLevelCategory, String secondLevelCategory) {
-        // Case 1: Có secondLevel -> tìm category cấp 2
+
+        // Case 1: Có secondLevel → chỉ lấy category cấp 2 đó
         if (secondLevelCategory != null && !secondLevelCategory.trim().isEmpty()) {
             log.debug("🔎 Looking for second level category: {}", secondLevelCategory);
             return categoryRepository.findByName(secondLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 2)
                     .map(cat -> {
-                        log.info("✅ Found category ID: {}", cat.getId());
+                        log.info("✅ Found category ID: {} ({})", cat.getId(), cat.getName());
                         return Collections.singletonList(cat.getId());
                     })
                     .orElseGet(() -> {
@@ -110,21 +100,25 @@ public class ProductService {
                     });
         }
 
-        // Case 2: Chỉ có topLevel -> lấy parent + tất cả children
+        // Case 2: Chỉ có topLevel → lấy TẤT CẢ category cấp 2 là con của nó
         if (topLevelCategory != null && !topLevelCategory.trim().isEmpty()) {
             log.debug("🔎 Looking for top level category: {}", topLevelCategory);
             return categoryRepository.findByName(topLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 1)
                     .map(parent -> {
-                        List<Long> ids = new ArrayList<>();
-                        ids.add(parent.getId()); // Parent ID
-                        if (parent.getSubCategories() != null) {
-                            ids.addAll(parent.getSubCategories().stream()
-                                    .map(Category::getId)
-                                    .collect(Collectors.toList()));
+                        // ✅ CHỈ LẤY IDs CỦA CÁC CHILDREN (không lấy parent ID)
+                        if (parent.getSubCategories() == null || parent.getSubCategories().isEmpty()) {
+                            log.warn("⚠️ Category '{}' has no sub-categories", topLevelCategory);
+                            return Collections.<Long>emptyList();
                         }
-                        log.info("✅ Found {} category IDs for '{}'", ids.size(), topLevelCategory);
-                        return ids;
+
+                        List<Long> childIds = parent.getSubCategories().stream()
+                                .map(Category::getId)
+                                .collect(Collectors.toList());
+
+                        log.info("✅ Found {} sub-categories for '{}': {}",
+                                childIds.size(), topLevelCategory, childIds);
+                        return childIds;
                     })
                     .orElseGet(() -> {
                         log.warn("⚠️ Top level category '{}' not found", topLevelCategory);
