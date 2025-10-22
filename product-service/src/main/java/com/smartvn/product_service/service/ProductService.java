@@ -106,15 +106,19 @@ public class ProductService {
             return categoryRepository.findByName(topLevelCategory.trim())
                     .filter(cat -> cat.getLevel() == 1)
                     .map(parent -> {
-                        // ✅ CHỈ LẤY IDs CỦA CÁC CHILDREN (không lấy parent ID)
-                        if (parent.getSubCategories() == null || parent.getSubCategories().isEmpty()) {
-                            log.warn("⚠️ Category '{}' has no sub-categories", topLevelCategory);
-                            return Collections.<Long>emptyList();
-                        }
-
-                        List<Long> childIds = parent.getSubCategories().stream()
+                        // ✅ BỎ KIỂM TRA EMPTY - NẾU KHÔNG CÓ CHILDREN THÌ TÌM TRONG CHÍNH PARENT
+                        List<Long> childIds = parent.getSubCategories() != null && !parent.getSubCategories().isEmpty()
+                                ? parent.getSubCategories().stream()
                                 .map(Category::getId)
-                                .collect(Collectors.toList());
+                                .collect(Collectors.toList())
+                                : Collections.emptyList();
+
+                        // ✅ NẾU KHÔNG CÓ CHILDREN, DÙNG CHÍNH PARENT ID
+                        if (childIds.isEmpty()) {
+                            log.info("ℹ️ No sub-categories for '{}', using parent ID: {}",
+                                    topLevelCategory, parent.getId());
+                            return Collections.singletonList(parent.getId());
+                        }
 
                         log.info("✅ Found {} sub-categories for '{}': {}",
                                 childIds.size(), topLevelCategory, childIds);

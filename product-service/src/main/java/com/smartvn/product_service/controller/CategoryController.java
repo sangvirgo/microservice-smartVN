@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api.prefix}/categories")
@@ -23,9 +24,14 @@ public class CategoryController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryDTO>>> getAllCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        List<CategoryDTO> categoryDTOs = categories.stream()
-                .map(CategoryDTO::new)
+        // ✅ CHỈ LẤY CATEGORIES LEVEL 1 (có nested subCategories)
+        List<Category> topLevelCategories = categoryService.getAllCategories()
+                .stream()
+                .filter(cat -> cat.getLevel() == 1) // Chỉ lấy level 1
+                .collect(Collectors.toList());
+
+        List<CategoryDTO> categoryDTOs = topLevelCategories.stream()
+                .map(CategoryDTO::new) // CategoryDTO tự động map subCategories
                 .toList();
 
         ApiResponse<List<CategoryDTO>> response = ApiResponse.<List<CategoryDTO>>builder()
