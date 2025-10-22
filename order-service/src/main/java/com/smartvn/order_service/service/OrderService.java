@@ -180,6 +180,7 @@ public class OrderService {
         }
 
         order.setOrderStatus(OrderStatus.CANCELLED);
+        order.setPaymentStatus(PaymentStatus.CANCELLED);
         return orderRepository.save(order);
     }
 

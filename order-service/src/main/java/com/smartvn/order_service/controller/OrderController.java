@@ -61,7 +61,7 @@ public class OrderController {
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
             response.put("messages", "Successfully retrieved order history");
-            return ResponseEntity.status(HttpStatus.FOUND).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (AppException e) {
             log.error("Error while get order.", e.getMessage());
             return ResponseEntity.status(e.getStatus())
@@ -162,8 +162,8 @@ public class OrderController {
             Long userId = userService.getUserIdFromJwt(jwt);
             userService.validateUser(userId);
             List<Order> orders = orderService.getOrderHistory(userId, orderStatus);
-            if(orders.isEmpty() || orders==null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            if(orders.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.OK)
                         .body(Map.of(
                                 "message", "Không có đơn hàng với trạng thái "+ orderStatus,
                                 "code", "EMPTY_ORDER"
@@ -178,7 +178,7 @@ public class OrderController {
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
             response.put("messages", "Successfully retrieved order history");
-            return ResponseEntity.status(HttpStatus.FOUND).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (AppException e) {
             log.error("Error while get order.", e.getMessage());
             return ResponseEntity.status(e.getStatus())
