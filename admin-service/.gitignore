@@ -32,10 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
-src/main/resources/application.properties
+src/main/resources/bootstrap.yml
 src/main/resources/*
 
-/src/main/resources/application.properties
+/src/main/resources/bootstrap.yml
 src/main/java/com/webanhang/team_project/config/initializer
 
 /target

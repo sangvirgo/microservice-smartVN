@@ -1,113 +1,74 @@
 package com.smartvn.admin_service.exceptions;
 
 import com.smartvn.admin_service.dto.response.ApiResponse;
-import jakarta.persistence.EntityExistsException;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.validation.FieldError;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.naming.AuthenticationException;
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+/**
+ * Xử lý tập trung các exception xảy ra trong ứng dụng
+ * và trả về định dạng ApiResponse chuẩn.
+ */
+@RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleEntityNotFoundException(EntityNotFoundException ex){
+    /**
+     * Bắt các lỗi ResponseStatusException (thường được ném từ service layer khi gọi Feign thất bại).
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Object>> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatusCode status = ex.getStatusCode();
+        String message = ex.getReason() != null ? ex.getReason() : "An error occurred";
+        log.error("ResponseStatusException: Status {}, Reason: {}", status, message, ex);
         return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("Entity not found! " + ex.getMessage()));
+                .status(status)
+                .body(ApiResponse.error(message, HttpStatus.valueOf(status.value()), "SERVICE_COMMUNICATION_ERROR"));
     }
 
-    @ExceptionHandler(EntityExistsException.class)
-    public ResponseEntity<ApiResponse> handleEntityExistsException(EntityExistsException ex){
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("Error: " + ex.getMessage()));
-    }
-
-    @ExceptionHandler(NullPointerException.class)
-    public ResponseEntity<ApiResponse> handleNullPointerException(NullPointerException ex) {
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Null pointer exception: " + ex.getMessage()));
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex){
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("Database Error: " + ex.getMessage()));
-    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiResponse> handleAuthenticationException(AuthenticationException ex){
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Authentication Error: " + ex.getMessage()));
-    }
-
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiResponse> handleBadCredentialsException(BadCredentialsException ex){
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Invalid credentials"));
-    }
-
-    @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<ApiResponse> handleDisabledException(DisabledException ex){
+    /**
+     * Bắt lỗi AccessDeniedException từ @PreAuthorize.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(AccessDeniedException ex) {
+        log.warn("Access Denied: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Account is disabled. Please verify your email."));
+                .body(ApiResponse.error("Bạn không có quyền thực hiện hành động này.", HttpStatus.FORBIDDEN, "ACCESS_DENIED"));
     }
 
+    /**
+     * Bắt lỗi validation từ @Valid.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation Error: " + errors));
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage()));
+        log.warn("Validation failed: {}", errors);
+        ApiResponse<Map<String, String>> response = ApiResponse.error("Dữ liệu không hợp lệ.", HttpStatus.BAD_REQUEST, "VALIDATION_ERROR");
+        response.setData(errors); // Đặt chi tiết lỗi validation vào data
+        return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiResponse> handleConstraintViolationException(ConstraintViolationException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation Error: " + ex.getMessage()));
-    }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse> handleIllegalArgumentException(IllegalArgumentException ex){
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Invalid Argument: " + ex.getMessage()));
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse> handleRuntimeException(RuntimeException ex){
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Runtime Error: " + ex.getMessage()));
-    }
-
+    /**
+     * Bắt các lỗi chung khác.
+     */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse> handleException(Exception ex){
+    public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception ex) {
+        log.error("An unexpected error occurred: ", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("General Error: " + ex.getMessage()));
+                .body(ApiResponse.error("Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.", HttpStatus.INTERNAL_SERVER_ERROR, "UNEXPECTED_ERROR"));
     }
 }
