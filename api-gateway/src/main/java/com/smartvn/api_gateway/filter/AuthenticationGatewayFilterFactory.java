@@ -75,7 +75,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
         }
 
         // ✅ 2. OAuth2 endpoints
-        if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
+        if (path.startsWith("/oauth2/*") || path.startsWith("/login/oauth2/*")) {
             return true;
         }
 

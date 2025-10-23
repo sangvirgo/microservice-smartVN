@@ -173,4 +173,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     boolean existsByUserId(Long userId);
 
+    @Query("SELECT CASE WHEN COUNT(o)>0 THEN true ELSE false END " +
+            "FROM Order o JOIN o.orderItems oi " +
+            "WHERE o.userId = :userId " +
+            "AND oi.productId = :productId " +
+            "AND o.orderStatus = 'DELIVERED'"
+    )
+    boolean existsByUserIdAndProductIdAndDelivered(@Param("userId") Long userId, @Param("productId") Long productId);
+
 }

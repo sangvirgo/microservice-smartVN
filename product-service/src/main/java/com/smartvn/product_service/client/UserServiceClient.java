@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 // Update UserServiceClient
 @FeignClient(name = "user-service", fallback = UserServiceFallback.class, configuration = FeignClientConfig.class)
 public interface UserServiceClient {
-    @GetMapping("/api/v1/internal/users/{userId}")
+    @GetMapping("${api.prefix}/internal/users/{userId}")
     UserInfoDTO getUserInfo(@PathVariable("userId") Long userId);
 }

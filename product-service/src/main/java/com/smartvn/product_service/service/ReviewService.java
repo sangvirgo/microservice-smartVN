@@ -1,5 +1,6 @@
 package com.smartvn.product_service.service;
 
+import com.smartvn.product_service.client.OrderServiceClient;
 import com.smartvn.product_service.client.UserServiceClient;
 import com.smartvn.product_service.dto.ReviewDTO;
 import com.smartvn.product_service.dto.ReviewRequest;
@@ -27,9 +28,18 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserServiceClient userServiceClient;
+    private final OrderServiceClient  orderServiceClient;
 
     @Transactional
     public Review createReview(Long userId, Long productId, ReviewRequest reviewRequest) {
+        Boolean hasPurchased= orderServiceClient.hasUserPurchasedProduct(userId, productId);
+        if(!hasPurchased){
+            throw new AppException(
+                    "Bạn phải mua sản phẩm này trước khi đánh giá",
+                    HttpStatus.FORBIDDEN
+                    );
+        }
+
         if (reviewRepository.findByProductIdAndUserId(productId, userId).isPresent()) {
             throw new AppException("You have already reviewed this product.", HttpStatus.BAD_REQUEST);
         }
