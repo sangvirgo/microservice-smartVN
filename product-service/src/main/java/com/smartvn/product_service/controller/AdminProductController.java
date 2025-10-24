@@ -73,6 +73,14 @@ public class AdminProductController {
         return ResponseEntity.ok(ApiResponse.success(new InventoryDTO(inv), "Inventory added"));
     }
 
+    @GetMapping("/{productId}")
+    public ResponseEntity<ApiResponse<ProductAdminViewDTO>> getProductDetail(
+            @PathVariable Long productId) {
+        Product product = productService.findById(productId);
+        ProductAdminViewDTO dto = convertToAdminDTO(product);
+        return ResponseEntity.ok(ApiResponse.success(dto, "Product retrieved"));
+    }
+
     private ProductAdminViewDTO convertToAdminDTO(Product product) {
         ProductAdminViewDTO dto = new ProductAdminViewDTO();
         dto.setId(product.getId());

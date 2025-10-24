@@ -30,7 +30,7 @@ public interface OrderServiceClient {
      * @param endDate Lọc đến ngày
      * @return Trang kết quả OrderAdminViewDTO
      */
-    @GetMapping("/api/v1/internal/orders/admin/all")
+    @GetMapping("${api.prefix}/internal/orders/admin/all")
     ResponseEntity<ApiResponse<Page<OrderAdminViewDTO>>> getAllOrdersAdmin(
             @RequestParam("page") int page,
             @RequestParam("size") int size,
@@ -46,7 +46,7 @@ public interface OrderServiceClient {
      * @param orderId ID đơn hàng
      * @return OrderAdminViewDTO
      */
-    @GetMapping("/api/v1/internal/orders/admin/{orderId}") // Hoặc dùng endpoint public nếu đủ thông tin
+    @GetMapping("${api.prefix}/internal/orders/admin/{orderId}") // Hoặc dùng endpoint public nếu đủ thông tin
     ResponseEntity<ApiResponse<OrderAdminViewDTO>> getOrderDetailAdmin(@PathVariable("orderId") Long orderId);
 
     /**
@@ -56,7 +56,7 @@ public interface OrderServiceClient {
      * @param newStatus Trạng thái mới (CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
      * @return OrderAdminViewDTO đã được cập nhật
      */
-    @PutMapping("/api/v1/internal/orders/{orderId}/status")
+    @PutMapping("${api.prefix}/internal/orders/{orderId}/status")
     ResponseEntity<ApiResponse<OrderAdminViewDTO>> updateOrderStatus(
             @PathVariable("orderId") Long orderId,
             @RequestParam("status") String newStatus); // Dùng String
@@ -68,7 +68,7 @@ public interface OrderServiceClient {
      * @param endDate Lọc đến ngày
      * @return OrderStatsDTO chứa thông tin thống kê
      */
-    @GetMapping("/api/v1/internal/orders/stats")
+    @GetMapping("${api.prefix}/internal/orders/stats")
     ResponseEntity<ApiResponse<OrderStatsDTO>> getOrderStats(
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate);

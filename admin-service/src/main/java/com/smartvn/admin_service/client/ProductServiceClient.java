@@ -41,7 +41,7 @@ public interface ProductServiceClient {
      * @param productId ID sản phẩm
      * @return ProductAdminViewDTO
      */
-    @GetMapping("/api/v1/internal/products/admin/{productId}") // Hoặc dùng endpoint public nếu đủ thông tin
+    @GetMapping("${api.prefix}/internal/products/admin/{productId}") // Hoặc dùng endpoint public nếu đủ thông tin
     ResponseEntity<ApiResponse<ProductAdminViewDTO>> getProductDetailAdmin(@PathVariable("productId") Long productId);
 
     /**
@@ -50,7 +50,7 @@ public interface ProductServiceClient {
      * @param productId ID sản phẩm
      * @return Phản hồi không có nội dung
      */
-    @PutMapping("/api/v1/internal/products/{productId}/toggle-active")
+    @PutMapping("${api.prefix}/internal/products/{productId}/toggle-active")
     ResponseEntity<ApiResponse<Void>> toggleProductActive(@PathVariable("productId") Long productId);
 
     /**
@@ -59,7 +59,7 @@ public interface ProductServiceClient {
      * @param productId ID sản phẩm
      * @return Phản hồi không có nội dung
      */
-    @DeleteMapping("/api/v1/internal/products/{productId}")
+    @DeleteMapping("${api.prefix}/internal/products/{productId}")
     ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable("productId") Long productId);
 
     /**
@@ -70,7 +70,7 @@ public interface ProductServiceClient {
      * @param request Dữ liệu cập nhật (số lượng, giá,...)
      * @return InventoryDTO đã được cập nhật
      */
-    @PutMapping("/api/v1/internal/products/{productId}/inventory/{inventoryId}")
+    @PutMapping("${api.prefix}/internal/products/{productId}/inventory/{inventoryId}")
     ResponseEntity<ApiResponse<InventoryDTO>> updateInventory(
             @PathVariable("productId") Long productId,
             @PathVariable("inventoryId") Long inventoryId,
@@ -83,7 +83,7 @@ public interface ProductServiceClient {
      * @param request Dữ liệu inventory mới (size, số lượng, giá,...)
      * @return InventoryDTO mới được tạo
      */
-    @PostMapping("/api/v1/internal/products/{productId}/inventory")
+    @PostMapping("${api.prefix}/internal/products/{productId}/inventory")
     ResponseEntity<ApiResponse<InventoryDTO>> addInventory(
             @PathVariable("productId") Long productId,
             @RequestBody UpdateInventoryRequest request);
@@ -100,7 +100,7 @@ public interface ProductServiceClient {
      * @param userId Lọc theo người dùng (tùy chọn)
      * @return Trang kết quả ReviewDTO
      */
-    @GetMapping("/api/v1/internal/reviews/admin/all")
+    @GetMapping("${api.prefix}/internal/reviews/admin/all")
     ResponseEntity<ApiResponse<Page<ReviewDTO>>> getAllReviewsAdmin( // Sử dụng generic hoặc tạo ReviewAdminDTO
                                                                      @RequestParam("page") int page,
                                                                      @RequestParam("size") int size,
@@ -113,6 +113,6 @@ public interface ProductServiceClient {
      * @param reviewId ID của review
      * @return Phản hồi không có nội dung
      */
-    @DeleteMapping("/api/v1/internal/reviews/{reviewId}")
+    @DeleteMapping("${api.prefix}/internal/reviews/{reviewId}")
     ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable("reviewId") Long reviewId);
 }
