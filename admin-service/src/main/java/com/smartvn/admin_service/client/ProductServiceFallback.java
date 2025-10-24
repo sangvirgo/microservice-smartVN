@@ -3,7 +3,9 @@ package com.smartvn.admin_service.client;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import com.smartvn.admin_service.dto.product.*; // Cần tạo DTO này
+import com.smartvn.admin_service.dto.product.ProductAdminViewDTO;
+import com.smartvn.admin_service.dto.product.InventoryDTO;
+import com.smartvn.admin_service.dto.product.UpdateInventoryRequest;
 
 public class ProductServiceFallback implements ProductServiceClient {
     @Override

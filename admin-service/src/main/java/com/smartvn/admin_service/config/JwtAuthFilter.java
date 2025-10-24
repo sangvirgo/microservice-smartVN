@@ -52,7 +52,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 // 4. Tạo danh sách GrantedAuthority từ roles
                 List<GrantedAuthority> authorities = roles.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role)) // Quan trọng: Thêm tiền tố ROLE_
+                        .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
                 // 5. Tạo đối tượng Authentication

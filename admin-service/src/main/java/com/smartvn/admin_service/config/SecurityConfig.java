@@ -43,8 +43,11 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        // Yêu cầu xác thực cho tất cả các endpoint admin
-                        .requestMatchers("/api/v1/admin/**").authenticated()
+                        .requestMatchers("/api/v1/admin/users/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/admin/products/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/admin/reviews/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/admin/dashboard/**").hasRole("ADMIN")
                         // Các request khác (nếu có) cũng yêu cầu xác thực
                         .anyRequest().authenticated()
                 )

@@ -3,7 +3,8 @@ package com.smartvn.admin_service.client;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import com.smartvn.admin_service.dto.user.*; // Cần tạo DTO này
+import com.smartvn.admin_service.dto.user.UserDTO;
+import com.smartvn.admin_service.dto.user.UserStatsDTO;
 
 public class UserServiceFallback implements UserServiceClient{
     @Override

@@ -1,5 +1,6 @@
 package com.smartvn.admin_service.dto.product;
 
+import jakarta.validation.constraints.Max;
 import lombok.Data;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

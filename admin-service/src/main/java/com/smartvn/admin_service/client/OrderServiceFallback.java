@@ -1,5 +1,7 @@
 package com.smartvn.admin_service.client;
 
+import com.smartvn.admin_service.dto.order.OrderAdminViewDTO;
+import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
