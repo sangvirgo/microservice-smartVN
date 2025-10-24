@@ -2,6 +2,7 @@ package com.smartvn.order_service.service;
 
 import com.smartvn.order_service.client.ProductServiceClient;
 import com.smartvn.order_service.client.UserServiceClient;
+import com.smartvn.order_service.dto.admin.OrderStatsDTO;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.enums.OrderStatus;
@@ -17,14 +18,21 @@ import com.smartvn.order_service.repository.CartRepository;
 import com.smartvn.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static java.lang.Long.parseLong;
 
 @Service
 @Slf4j
@@ -213,6 +221,119 @@ public class OrderService {
         }
 
         return orderRepository.save(order);
+    }
+
+
+    public Page<Order> searchOrdersForAdmin(String search, String status, String paymentStatus,
+                                            LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        Specification<Order> spec = Specification.where(null);
+
+        if (search != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.or(
+                            cb.equal(root.get("id"), parseLong(search)),
+                            cb.equal(root.get("userId"), parseLong(search))
+                    )
+            );
+        }
+
+        if (status != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("orderStatus"), OrderStatus.valueOf(status))
+            );
+        }
+
+        if (paymentStatus != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("paymentStatus"), PaymentStatus.valueOf(paymentStatus))
+            );
+        }
+
+        if (startDate != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("createdAt"), startDate.atStartOfDay())
+            );
+        }
+
+        if (endDate != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("createdAt"), endDate.atTime(23, 59, 59))
+            );
+        }
+
+        return orderRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public Order updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        Order order = findOrderById(orderId);
+
+        // ✅ Validate transition hợp lệ
+        validateStatusTransition(order.getOrderStatus(), newStatus);
+
+        // ✅ Xử lý logic đặc biệt khi DELIVERED
+        if (newStatus == OrderStatus.DELIVERED) {
+            order.setDeliveryDate(LocalDateTime.now());
+            order.setPaymentStatus(PaymentStatus.COMPLETED);
+
+            // Tăng quantity_sold cho từng product
+            for (OrderItem item : order.getOrderItems()) {
+                productServiceClient.increaseQuantitySold(new InventoryCheckRequest(item.getProductId(), item.getQuantity()));
+            }
+        }
+
+        order.setOrderStatus(newStatus);
+        return orderRepository.save(order);
+    }
+
+    private void validateStatusTransition(OrderStatus current, OrderStatus next) {
+        // PENDING → CONFIRMED → SHIPPED → DELIVERED
+        // CANCELLED có thể từ PENDING hoặc CONFIRMED
+
+        if (current == OrderStatus.DELIVERED || current == OrderStatus.CANCELLED) {
+            throw new AppException("Cannot update completed order", HttpStatus.BAD_REQUEST);
+        }
+
+        if (current == OrderStatus.SHIPPED || next == OrderStatus.CONFIRMED) {
+            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
+        }
+
+        if (current == OrderStatus.CONFIRMED || next == OrderStatus.PENDING) {
+            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
+        }
+
+        if (current == OrderStatus.SHIPPED || next == OrderStatus.CANCELLED) {
+            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public OrderStatsDTO calculateOrderStats(LocalDate startDate, LocalDate endDate) {
+        OrderStatsDTO stats = new OrderStatsDTO();
+
+        LocalDateTime start = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime end = endDate != null ? endDate.atTime(23, 59, 59) : null;
+
+        stats.setTotalOrders(orderRepository.countByDateRange(start, end));
+        stats.setPendingOrders(orderRepository.countOrdersByStatusAndDateRange(OrderStatus.PENDING, start, end));
+        stats.setConfirmedOrders(orderRepository.countOrdersByStatusAndDateRange(OrderStatus.CONFIRMED, start, end));
+        stats.setShippedOrders(orderRepository.countOrdersByStatusAndDateRange(OrderStatus.SHIPPED, start, end));
+        stats.setDeliveredOrders(orderRepository.countOrdersByStatusAndDateRange(OrderStatus.DELIVERED, start, end));
+        stats.setCancelledOrders(orderRepository.countOrdersByStatusAndDateRange(OrderStatus.CANCELLED, start, end));
+
+        Double totalRevenue = orderRepository.sumRevenueByDateRange(start, end);
+        stats.setTotalRevenue(totalRevenue != null ? totalRevenue : 0.0);
+
+        // Revenue this month
+        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        Double monthRevenue = orderRepository.sumRevenueByDateRange(monthStart, null);
+        stats.setRevenueThisMonth(monthRevenue != null ? monthRevenue : 0.0);
+
+        // Average order value
+        stats.setAverageOrderValue(stats.getTotalOrders() > 0
+                ? stats.getTotalRevenue() / stats.getTotalOrders()
+                : 0.0);
+
+        return stats;
     }
 }
 

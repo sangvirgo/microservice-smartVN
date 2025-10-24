@@ -6,6 +6,7 @@ import com.smartvn.order_service.model.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,7 +19,7 @@ import java.util.List;
  * Quản lý đơn hàng
  */
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long> {
+public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
     // ============================================
     // TÌM KIẾM CƠ BẢN
@@ -180,5 +181,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "AND o.orderStatus = 'DELIVERED'"
     )
     boolean existsByUserIdAndProductIdAndDelivered(@Param("userId") Long userId, @Param("productId") Long productId);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE " +
+            "(:startDate IS NULL OR o.createdAt >= :startDate) " +
+            "AND (:endDate IS NULL OR o.createdAt <= :endDate)")
+    Long countByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
 }

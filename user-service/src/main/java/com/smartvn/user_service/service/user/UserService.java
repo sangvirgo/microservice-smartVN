@@ -8,6 +8,7 @@ import com.smartvn.user_service.dto.internal.UserInfoDTO;
 import com.smartvn.user_service.dto.response.ApiResponse;
 import com.smartvn.user_service.dto.user.UpdateUserRequest;
 import com.smartvn.user_service.dto.user.UserDTO;
+import com.smartvn.user_service.dto.user.UserStatsDTO;
 import com.smartvn.user_service.enums.UserRole;
 import com.smartvn.user_service.model.Address;
 import com.smartvn.user_service.model.Role;
@@ -20,6 +21,9 @@ import com.smartvn.user_service.service.otp.OtpService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -127,8 +131,80 @@ public class UserService implements IUserService {
         return new AddressDTO(savedAddress);
     }
 
+    public Page<User> searchUsers(String search, String role, Boolean isBanned, Pageable pageable) {
+        Specification<User> spec = Specification.where(null);
+        if(search != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.or(
+                            cb.like(root.get("email"), "%" + search + "%"),
+                            cb.like(root.get("firstName"), "%" + search + "%"),
+                            cb.like(root.get("lastName"), "%" + search + "%")
+                    )
+            );
+        }
+        if (role != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("role").get("name"), UserRole.valueOf(role))
+            );
+        }
+
+        if (isBanned != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("isBanned"), isBanned)
+            );
+        }
+        return userRepository.findAll(spec, pageable);
+    }
+
+    public void banUser(Long userId) {
+        User user = userRepository.findById(userId).
+                orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+        user.setBanned(true);
+        userRepository.save(user);
+    }
+
+    public void unbanUser(Long userId) {
+        User user = userRepository.findById(userId).
+                orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+        user.setBanned(false);
+        userRepository.save(user);
+    }
+
+    public void changeRole(Long userId, UserRole userRole) {
+        User user = userRepository.findById(userId).
+                orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+        Role targetRole = roleRepository.findByName(userRole)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found in database: " + userRole.name()));
+        user.setRole(targetRole);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void incrementWarningCount(Long userId) {
+        User user = userRepository.findById(userId).
+                orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+
+        user.setWarningCount(user.getWarningCount() + 1);
+        if (user.getWarningCount() >= 3 && !user.isBanned()) {
+            user.setBanned(true);
+        }
+
+        userRepository.save(user);
+    }
+
+    public UserStatsDTO calculateUserStats() {
+        UserStatsDTO stats = new UserStatsDTO();
+        stats.setTotalUsers(userRepository.count());
+        stats.setTotalCustomers(userRepository.countByRole_Name(UserRole.CUSTOMER));
+        stats.setTotalStaff(userRepository.countByRole_Name(UserRole.STAFF));
+        stats.setTotalAdmins(userRepository.countByRole_Name(UserRole.ADMIN));
+        stats.setBannedUsers(userRepository.countByIsBanned(true));
+        stats.setInactiveUsers(userRepository.countByActive(false));
+        return stats;
+    }
+
     // Hàm helper private, không cần nằm trong interface
-    private UserDTO convertUserToDto(User user) {
+    public UserDTO convertUserToDto(User user) {
         UserDTO userDTO = new UserDTO();
         userDTO.setId(user.getId());
         userDTO.setFirstName(user.getFirstName());

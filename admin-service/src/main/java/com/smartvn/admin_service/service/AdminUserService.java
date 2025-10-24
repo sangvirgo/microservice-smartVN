@@ -91,7 +91,7 @@ public class AdminUserService {
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
             return response.getBody().getData();
         } else {
-            HttpStatus status = response.getStatusCode();
+            HttpStatus status = (HttpStatus) response.getStatusCode();
             String message = (response.getBody() != null && response.getBody().getMessage() != null)
                     ? response.getBody().getMessage()
                     : errorMessage;
@@ -101,9 +101,9 @@ public class AdminUserService {
         }
     }
     // Overload cho trường hợp response không có data (Void)
-    private void handleFeignResponse(ResponseEntity<ApiResponse<Void>> response, String errorMessage) {
+    private void handleVoidFeignResponse(ResponseEntity<ApiResponse<Void>> response, String errorMessage) {
         if (!response.getStatusCode().is2xxSuccessful()) {
-            HttpStatus status = response.getStatusCode();
+            HttpStatus status = (HttpStatus) response.getStatusCode(); // Cast an toàn hơn
             String message = (response.getBody() != null && response.getBody().getMessage() != null)
                     ? response.getBody().getMessage()
                     : errorMessage;

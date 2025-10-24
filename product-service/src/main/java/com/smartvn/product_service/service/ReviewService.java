@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,5 +129,37 @@ public class ReviewService {
         productRepository.save(product);
         log.info("Updated product {} rating: {} stars from {} reviews.",
                 productId, product.getAverageRating(), product.getNumRatings());
+    }
+
+
+    public Page<Review> searchReviewsForAdmin(String status, Long productId, Long userId, Pageable pageable) {
+        Specification<Review> spec = Specification.where(null);
+
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+
+        if (productId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("product").get("id"), productId));
+        }
+
+        if (userId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("userId"), userId));
+        }
+
+        return reviewRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public void deleteReviewByAdmin(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new AppException("Review not found", HttpStatus.NOT_FOUND));
+
+        reviewRepository.delete(review);
+
+        // increase the count of user 
+
+        // ✅ Recount rating sau khi xóa
+        updateProductRating(review.getProduct().getId());
     }
 }

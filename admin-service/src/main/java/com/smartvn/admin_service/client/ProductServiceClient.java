@@ -106,19 +106,6 @@ public interface ProductServiceClient {
                                                              @RequestParam(value = "status", required = false) String status,
                                                              @RequestParam(value = "productId", required = false) Long productId,
                                                              @RequestParam(value = "userId", required = false) Long userId);
-
-    /**
-     * Cập nhật trạng thái của một review (Approve, Reject, Warn).
-     * Endpoint này cần được tạo trong Product Service.
-     * @param reviewId ID của review
-     * @param newStatus Trạng thái mới (APPROVED, REJECTED, WARN)
-     * @return Phản hồi không có nội dung
-     */
-    @PutMapping("/api/v1/internal/reviews/{reviewId}/status")
-    ResponseEntity<ApiResponse<Void>> updateReviewStatus(
-            @PathVariable("reviewId") Long reviewId,
-            @RequestParam("status") String newStatus); // Dùng String để linh hoạt
-
     /**
      * Xóa một review.
      * Endpoint này cần được tạo trong Product Service.

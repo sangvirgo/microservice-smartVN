@@ -108,6 +108,9 @@ public class JwtUtils {
         Claims claims = getClaimsFromToken(token);
         // Claim "id" có thể là Integer hoặc Long tùy lúc tạo token
         Object idClaim = claims.get("id");
+        if (idClaim == null) {
+            throw new IllegalArgumentException("User ID claim not found in JWT");
+        }
         if (idClaim instanceof Integer) {
             return ((Integer) idClaim).longValue();
         } else if (idClaim instanceof Long) {
