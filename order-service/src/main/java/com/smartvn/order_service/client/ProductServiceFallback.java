@@ -73,4 +73,9 @@ public class ProductServiceFallback implements ProductServiceClient {
         log.error("Product Service unavailable. Cannot batch reduce inventory");
         throw new RuntimeException("Product Service is currently unavailable");
     }
+
+    @Override
+    public void increaseQuantitySold(InventoryCheckRequest request) {
+        log.error("Product Service unavailable. Cannot increase quantity sold");
+    }
 }

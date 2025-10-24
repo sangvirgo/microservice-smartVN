@@ -55,6 +55,7 @@ public class InternalUserController {
         return ResponseEntity.ok(new AddressDTO(address));
     }
 
+    @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<UserDTO>>> searchUsers(
             @RequestParam("page") int page,
             @RequestParam("size") int size,

@@ -157,7 +157,7 @@ public class ReviewService {
 
         reviewRepository.delete(review);
 
-        // increase the count of user 
+        // increase the count of user
 
         // ✅ Recount rating sau khi xóa
         updateProductRating(review.getProduct().getId());

@@ -5,23 +5,14 @@ import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.InventoryCheckRequest;
 import com.smartvn.product_service.dto.ProductDTO;
 import com.smartvn.product_service.dto.ProductDetailDTO;
-import com.smartvn.product_service.dto.admin.ReviewAdminDTO;
-import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Inventory;
-import com.smartvn.product_service.model.Review;
 import com.smartvn.product_service.service.InventoryService;
 import com.smartvn.product_service.service.ProductService;
-import com.smartvn.product_service.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +25,6 @@ import java.util.stream.Collectors;
 public class InternalProductController {
     private final InventoryService  inventoryService;
     private final ProductService productService;
-    private final ReviewService  reviewService;
 
     @GetMapping("/products/{productId}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long productId) {
@@ -99,37 +89,11 @@ public class InternalProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{productId}/increase-sold")
+    @PostMapping("/admin/{productId}/increase-sold")
     public ResponseEntity<Void> increaseQuantitySold(@RequestBody InventoryCheckRequest request) {
 
         productService.increaseQuantitySold(request);
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * ✅ XÓA REVIEW
-     */
-    @DeleteMapping("/reviews/{reviewId}")
-    public ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable Long reviewId) {
-        reviewService.deleteReviewByAdmin(reviewId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Review deleted"));
-    }
-
-    /**
-     * ✅ LẤY TẤT CẢ REVIEWS CHO ADMIN
-     */
-    @GetMapping("/reviews/admin/all")
-    public ResponseEntity<ApiResponse<Page<ReviewAdminDTO>>> getAllReviewsAdmin(
-            @RequestParam("page") int page,
-            @RequestParam("size") int size,
-            @RequestParam(value = "status", required = false) String status,
-            @RequestParam(value = "productId", required = false) Long productId,
-            @RequestParam(value = "userId", required = false) Long userId) {
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewService.searchReviewsForAdmin(status, productId, userId, pageable);
-        Page<ReviewAdminDTO> dtos = reviews.map(this::convertToAdminDTO);
-
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Reviews retrieved"));
-    }
 }

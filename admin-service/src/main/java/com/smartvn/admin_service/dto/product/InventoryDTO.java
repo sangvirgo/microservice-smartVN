@@ -16,4 +16,16 @@ public class InventoryDTO {
     private BigDecimal discountedPrice;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public InventoryDTO(Inventory inv) {
+        this.id = inv.getId();
+        this.productId = inv.getProduct().getId();
+        this.size = inv.getSize();
+        this.quantity = inv.getQuantity();
+        this.price = inv.getPrice();
+        this.discountPercent = inv.getDiscountPercent();
+        this.discountedPrice = inv.getDiscountedPrice();
+        this.createdAt = inv.getCreatedAt();
+        this.updatedAt = inv.getUpdatedAt();
+    }
 }

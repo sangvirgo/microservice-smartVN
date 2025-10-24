@@ -108,6 +108,11 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             return true;
         }
 
+        // ✅ THÊM: Admin endpoints yêu cầu JWT
+        if (path.startsWith("/api/v1/admin/")) {
+            return false; // Cần JWT token
+        }
+
         return false;
     }
 

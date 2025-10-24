@@ -1,8 +1,10 @@
 package com.smartvn.product_service.service;
 
 import com.smartvn.product_service.dto.BulkProductRequest;
+import com.smartvn.product_service.dto.InventoryCheckRequest;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
+import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.*;
 import com.smartvn.product_service.repository.CategoryRepository;
 import com.smartvn.product_service.repository.ImageRepository;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -382,5 +385,51 @@ public class ProductService {
                 });
 
         return childCategory;
+    }
+
+    @Transactional
+    public void toggleProductActive(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException("Product not found", HttpStatus.NOT_FOUND));
+        product.setIsActive(!product.getIsActive());
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void softDeleteProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException("Product not found", HttpStatus.NOT_FOUND));
+        product.setIsActive(false);
+        productRepository.save(product);
+    }
+
+    public Page<Product> searchProductsForAdmin(String search, Long categoryId, Boolean isActive, Pageable pageable) {
+        Specification<Product> spec = Specification.where(null);
+
+        if (search != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%"));
+        }
+
+        if (categoryId != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("category").get("id"), categoryId));
+        }
+
+        if (isActive != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("isActive"), isActive));
+        }
+
+        return productRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public void increaseQuantitySold(InventoryCheckRequest request) {
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new AppException("Product not found", HttpStatus.NOT_FOUND));
+
+        product.setQuantitySold(product.getQuantitySold() + request.getQuantity());
+        productRepository.save(product);
     }
 }
