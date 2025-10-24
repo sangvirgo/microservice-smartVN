@@ -1,6 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.UserRole;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -56,4 +57,12 @@ public class UserServiceFallback implements UserServiceClient{
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Void>> changeRole(Long userId, UserRole role) {
+        log.error("User Service unavailable. Cannot change role for user {}", userId);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));
+    }
 }

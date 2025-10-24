@@ -62,7 +62,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/{userId}/role")
-    public ResponseEntity<ApiResponse<?>> changeRole(@PathVariable Long userId ,@PathVariable UserRole role) {
+    public ResponseEntity<ApiResponse<?>> changeRole(@PathVariable Long userId ,@RequestParam UserRole role) {
         adminUserService.changeRole(userId, role);
         return ResponseEntity.ok(ApiResponse.success(null, "Role changed"));
     }

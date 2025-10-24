@@ -1,7 +1,9 @@
 package com.smartvn.product_service.controller;
 
 import com.smartvn.product_service.dto.BulkProductRequest;
+import com.smartvn.product_service.dto.InventoryDTO;
 import com.smartvn.product_service.dto.admin.ProductAdminViewDTO;
+import com.smartvn.product_service.dto.admin.UpdateInventoryRequest;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Inventory;
 import com.smartvn.product_service.model.Product;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api.prefix}/internal/products/admin")
@@ -51,7 +55,7 @@ public class AdminProductController {
     }
 
     @PutMapping("/{productId}/inventory/{inventoryId}")
-    public ResponseEntity<ApiResponse<BulkProductRequest.InventoryItemDTO>> updateInventory(
+    public ResponseEntity<ApiResponse<InventoryDTO>> updateInventory(
             @PathVariable Long productId,
             @PathVariable Long inventoryId,
             @RequestBody UpdateInventoryRequest request) {
@@ -60,12 +64,21 @@ public class AdminProductController {
         return ResponseEntity.ok(ApiResponse.success(new InventoryDTO(updated), "Inventory updated"));
     }
 
+    @PostMapping("/{productId}/inventory")
+    public ResponseEntity<ApiResponse<InventoryDTO>> addInventory(
+            @PathVariable Long productId,
+            @RequestBody UpdateInventoryRequest request) {
+
+        Inventory inv = inventoryService.addInventory(productId, request);
+        return ResponseEntity.ok(ApiResponse.success(new InventoryDTO(inv), "Inventory added"));
+    }
+
     private ProductAdminViewDTO convertToAdminDTO(Product product) {
         ProductAdminViewDTO dto = new ProductAdminViewDTO();
         dto.setId(product.getId());
         dto.setTitle(product.getTitle());
         dto.setBrand(product.getBrand());
-        dto.setIsActive(product.getIsActive());
+        dto.setActive(product.getIsActive());
         dto.setWarningCount(product.getWarningCount());
         dto.setQuantitySold(product.getQuantitySold());
         dto.setAverageRating(product.getAverageRating());

@@ -106,7 +106,6 @@ public class InternalUserController {
         return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
     }
 
-    // internal/users/{userId}/role
     @PutMapping("/{userId}/role")
     public ResponseEntity<ApiResponse<Void>> changeRoleUser(@PathVariable Long userId, @RequestParam UserRole role) {
         userService.changeRole(userId, role);

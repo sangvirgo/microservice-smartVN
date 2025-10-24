@@ -144,4 +144,14 @@ public class InternalOrderController {
         OrderStatsDTO stats = orderService.calculateOrderStats(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
     }
+
+    @GetMapping("/admin/{orderId}")
+    public ResponseEntity<ApiResponse<OrderAdminViewDTO>> getOrderDetailAdmin(
+            @PathVariable Long orderId) {
+
+        Order order = orderService.findOrderById(orderId);
+        OrderAdminViewDTO dto = convertToAdminDTO(order);
+
+        return ResponseEntity.ok(ApiResponse.success(dto, "Order detail retrieved"));
+    }
 }

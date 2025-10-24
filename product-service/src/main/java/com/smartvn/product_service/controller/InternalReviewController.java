@@ -1,5 +1,7 @@
 package com.smartvn.product_service.controller;
 
+import com.smartvn.product_service.client.UserServiceClient;
+import com.smartvn.product_service.dto.UserInfoDTO;
 import com.smartvn.product_service.dto.admin.ReviewAdminDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Review;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("${api.prefix}/internal/admin/review")
 public class InternalReviewController {
     private final ReviewService reviewService;
+    private final UserServiceClient userServiceClient;
 
     /**
      * ✅ XÓA REVIEW
@@ -45,5 +48,30 @@ public class InternalReviewController {
         Page<ReviewAdminDTO> dtos = reviews.map(this::convertToAdminDTO);
 
         return ResponseEntity.ok(ApiResponse.success(dtos, "Reviews retrieved"));
+    }
+
+    private ReviewAdminDTO convertToAdminDTO(Review review) {
+        ReviewAdminDTO dto = new ReviewAdminDTO();
+        dto.setId(review.getId());
+        dto.setUserId(review.getUserId());
+        dto.setProductId(review.getProduct().getId());
+        dto.setProductTitle(review.getProduct().getTitle());
+        dto.setRating(review.getRating());
+        dto.setReviewContent(review.getReviewContent());
+        dto.setCreatedAt(review.getCreatedAt());
+        dto.setUpdatedAt(review.getUpdatedAt());
+
+        // ✅ Lấy thông tin user từ UserServiceClient (nếu cần)
+        try {
+            UserInfoDTO userInfo = userServiceClient.getUserInfo(review.getUserId());
+            dto.setUserEmail(userInfo.getEmail());
+            dto.setUserName(userInfo.getFullName());
+        } catch (Exception e) {
+            log.warn("Failed to fetch user info for review {}", review.getId());
+            dto.setUserEmail("Unknown");
+            dto.setUserName("Unknown User");
+        }
+
+        return dto;
     }
 }
