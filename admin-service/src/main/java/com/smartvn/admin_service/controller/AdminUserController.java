@@ -1,8 +1,10 @@
 package com.smartvn.admin_service.controller;
 
+import com.smartvn.admin_service.client.UserServiceClient;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.dto.user.UserDTO;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
+import com.smartvn.admin_service.enums.UserRole;
 import com.smartvn.admin_service.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AdminUserController {
     private final AdminUserService adminUserService;
+    private final UserServiceClient  userServiceClient;
 
     @GetMapping
     public ResponseEntity<ApiResponse<?>> getAllUsers(
@@ -57,5 +60,11 @@ public class AdminUserController {
     public ResponseEntity<ApiResponse<UserStatsDTO>> getStats() {
         UserStatsDTO stats = adminUserService.getUserStats();
         return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
+    }
+
+    @PutMapping("/{id}/role")
+    public ResponseEntity<ApiResponse<?>> changeRole(@PathVariable Long userId ,@PathVariable UserRole role) {
+        userServiceClient.changeRole(userId, role);
+        return ResponseEntity.ok(ApiResponse.success(null, "Role changed"));
     }
 }

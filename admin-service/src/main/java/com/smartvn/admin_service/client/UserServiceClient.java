@@ -4,6 +4,7 @@ import com.smartvn.admin_service.config.FeignClientConfig;
 import com.smartvn.admin_service.dto.user.UserDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.response.ApiResponse; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.user.UserStatsDTO; // Cần tạo DTO này
+import com.smartvn.admin_service.enums.UserRole;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page; // Sử dụng Page của Spring Data
 import org.springframework.http.ResponseEntity;
@@ -41,7 +42,7 @@ public interface UserServiceClient {
      * @param userId ID của người dùng
      * @return UserDTO
      */
-    @GetMapping("/api/v1/internal/users/{userId}")
+    @GetMapping("${api.prefix}/internal/users/{userId}")
     ResponseEntity<ApiResponse<UserDTO>> getUserById(@PathVariable("userId") Long userId);
 
 
@@ -51,10 +52,10 @@ public interface UserServiceClient {
      * @param userId ID của người dùng
      * @return Phản hồi không có nội dung
      */
-    @PutMapping("/api/v1/internal/users/{userId}/ban")
+    @PutMapping("${api.prefix}/internal/users/{userId}/ban")
     ResponseEntity<ApiResponse<Void>> banUser(@PathVariable("userId") Long userId);
 
-    @PutMapping("/api/v1/internal/users/{userId}/unban")
+    @PutMapping("${api.prefix}/internal/users/{userId}/unban")
     ResponseEntity<ApiResponse<Void>> unbanUser(@PathVariable("userId") Long userId);
 
     /**
@@ -63,7 +64,7 @@ public interface UserServiceClient {
      * @param userId ID của người dùng
      * @return Phản hồi không có nội dung
      */
-    @PutMapping("/api/v1/internal/users/{userId}/warn")
+    @PutMapping("${api.prefix}/internal/users/{userId}/warn")
     ResponseEntity<ApiResponse<Void>> warnUser(@PathVariable("userId") Long userId);
 
     /**
@@ -71,6 +72,9 @@ public interface UserServiceClient {
      * Endpoint này cần được tạo trong User Service.
      * @return UserStatsDTO chứa thông tin thống kê
      */
-    @GetMapping("/api/v1/internal/users/stats")
+    @GetMapping("${api.prefix}/internal/users/stats")
     ResponseEntity<ApiResponse<UserStatsDTO>> getUserStats();
+
+    @PutMapping("${api.prefix}/internal/users/{userId}/role")
+    ResponseEntity<ApiResponse<Void>> changeRole(@PathVariable("userId") Long userId, @RequestParam UserRole role);
 }
