@@ -3,6 +3,7 @@ package com.smartvn.admin_service.client;
 import com.smartvn.admin_service.config.FeignClientConfig;
 import com.smartvn.admin_service.dto.product.ProductAdminViewDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.product.InventoryDTO; // Cần tạo DTO này
+import com.smartvn.admin_service.dto.product.ReviewDTO;
 import com.smartvn.admin_service.dto.product.UpdateInventoryRequest; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -100,12 +101,12 @@ public interface ProductServiceClient {
      * @return Trang kết quả ReviewDTO
      */
     @GetMapping("/api/v1/internal/reviews/admin/all")
-    ResponseEntity<ApiResponse<Page<?>>> getAllReviewsAdmin( // Sử dụng generic hoặc tạo ReviewAdminDTO
-                                                             @RequestParam("page") int page,
-                                                             @RequestParam("size") int size,
-                                                             @RequestParam(value = "status", required = false) String status,
-                                                             @RequestParam(value = "productId", required = false) Long productId,
-                                                             @RequestParam(value = "userId", required = false) Long userId);
+    ResponseEntity<ApiResponse<Page<ReviewDTO>>> getAllReviewsAdmin( // Sử dụng generic hoặc tạo ReviewAdminDTO
+                                                                     @RequestParam("page") int page,
+                                                                     @RequestParam("size") int size,
+                                                                     @RequestParam(value = "status", required = false) String status,
+                                                                     @RequestParam(value = "productId", required = false) Long productId,
+                                                                     @RequestParam(value = "userId", required = false) Long userId);
     /**
      * Xóa một review.
      * Endpoint này cần được tạo trong Product Service.

@@ -1,9 +1,12 @@
 package com.smartvn.product_service.service;
 
 import com.smartvn.product_service.dto.InventoryCheckRequest;
+import com.smartvn.product_service.dto.admin.UpdateInventoryRequest;
 import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Inventory;
+import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.repository.InventoryRepository;
+import com.smartvn.product_service.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import java.util.List;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final ProductRepository productRepository;
 
     public List<Inventory> getInventoriesByProduct(Long productId) {
         return inventoryRepository.findAllByProductId(productId);
@@ -82,5 +86,31 @@ public class InventoryService {
 
         inv.setQuantity(inv.getQuantity() + rq.getQuantity());
         inventoryRepository.save(inv);
+    }
+
+    public Inventory addInventory(Long productId, UpdateInventoryRequest req) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException("Product not found", HttpStatus.NOT_FOUND));
+
+        Inventory inv = new Inventory();
+        inv.setProduct(product);
+        inv.setSize(req.getSize());
+        inv.setQuantity(req.getQuantity());
+        inv.setPrice(req.getPrice());
+        inv.setDiscountPercent(req.getDiscountPercent());
+
+        return inventoryRepository.save(inv);
+    }
+
+    public Inventory updateInventory(Long inventoryId, UpdateInventoryRequest req) {
+        Inventory inv = inventoryRepository.findById(inventoryId)
+                .orElseThrow(() -> new AppException("Inventory not found", HttpStatus.NOT_FOUND));
+
+        if (req.getSize() != null) inv.setSize(req.getSize());
+        if (req.getQuantity() != null) inv.setQuantity(req.getQuantity());
+        if (req.getPrice() != null) inv.setPrice(req.getPrice());
+        if (req.getDiscountPercent() != null) inv.setDiscountPercent(req.getDiscountPercent());
+
+        return inventoryRepository.save(inv);
     }
 }

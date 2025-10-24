@@ -4,6 +4,7 @@ import com.smartvn.admin_service.client.UserServiceClient;
 import com.smartvn.admin_service.dto.user.UserDTO;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -71,6 +72,14 @@ public class AdminUserService {
         log.info("Successfully warned user with ID: {}", userId);
     }
 
+
+    public void changeRole(Long userId, UserRole role) {
+        log.warn("Changing role for user ID: {} to role: {}", userId, role);
+        ResponseEntity<ApiResponse<Void>> response=userServiceClient.changeRole(userId, role);
+        handleFeignResponse(response, "Failed to change role for user ID: " + userId);
+        log.info("Successfully changed role for user ID: {} to role: {}", userId, role);
+    }
+
     /**
      * Lấy thống kê người dùng.
      */
@@ -79,6 +88,8 @@ public class AdminUserService {
         ResponseEntity<ApiResponse<UserStatsDTO>> response = userServiceClient.getUserStats();
         return handleFeignResponse(response, "Failed to get user stats");
     }
+
+
 
     /**
      * Hàm tiện ích xử lý response từ Feign Client.

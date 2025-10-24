@@ -15,7 +15,7 @@ import java.time.LocalDate; // Hoặc LocalDateTime tùy endpoint gốc
 /**
  * Feign Client để giao tiếp với Order Service.
  */
-@FeignClient(name = "order-service", configuration = FeignClientConfig.class, fallback = OrderServiceClient.class)
+@FeignClient(name = "order-service", configuration = FeignClientConfig.class, fallback = OrderServiceFallback.class)
 public interface OrderServiceClient {
 
     /**

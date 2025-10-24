@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AdminUserController {
     private final AdminUserService adminUserService;
-    private final UserServiceClient  userServiceClient;
 
     @GetMapping
     public ResponseEntity<ApiResponse<?>> getAllUsers(
@@ -62,9 +61,9 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
     }
 
-    @PutMapping("/{id}/role")
+    @PutMapping("/{userId}/role")
     public ResponseEntity<ApiResponse<?>> changeRole(@PathVariable Long userId ,@PathVariable UserRole role) {
-        userServiceClient.changeRole(userId, role);
+        adminUserService.changeRole(userId, role);
         return ResponseEntity.ok(ApiResponse.success(null, "Role changed"));
     }
 }

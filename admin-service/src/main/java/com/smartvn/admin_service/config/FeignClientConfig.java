@@ -1,5 +1,8 @@
 package com.smartvn.admin_service.config;
 
+import com.smartvn.admin_service.client.OrderServiceFallback;
+import com.smartvn.admin_service.client.ProductServiceFallback;
+import com.smartvn.admin_service.client.UserServiceFallback;
 import feign.Request;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
@@ -29,5 +32,20 @@ public class FeignClientConfig {
                 5000,  // connectTimeout (ms)
                 10000  // readTimeout (ms)
         );
+    }
+
+    @Bean
+    public OrderServiceFallback orderServiceFallback() {
+        return new OrderServiceFallback();
+    }
+
+    @Bean
+    public ProductServiceFallback productServiceFallback() {
+        return new ProductServiceFallback();
+    }
+
+    @Bean
+    public UserServiceFallback userServiceFallback() {
+        return new UserServiceFallback();
     }
 }

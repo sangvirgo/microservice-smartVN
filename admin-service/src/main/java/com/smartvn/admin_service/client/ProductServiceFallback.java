@@ -1,5 +1,6 @@
 package com.smartvn.admin_service.client;
 
+import com.smartvn.admin_service.dto.product.ReviewDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -60,7 +61,7 @@ public class ProductServiceFallback implements ProductServiceClient {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<Page<?>>> getAllReviewsAdmin(int page, int size, String status, Long productId, Long userId) {
+    public ResponseEntity<ApiResponse<Page<ReviewDTO>>> getAllReviewsAdmin(int page, int size, String status, Long productId, Long userId) {
         log.error("Product Service unavailable. Returning empty result.");
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
