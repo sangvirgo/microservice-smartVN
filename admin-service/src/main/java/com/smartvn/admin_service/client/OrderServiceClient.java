@@ -1,6 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.config.FeignClientConfig;
+import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.order.OrderStatsDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.response.ApiResponse;
@@ -72,4 +73,11 @@ public interface OrderServiceClient {
     ResponseEntity<ApiResponse<OrderStatsDTO>> getOrderStats(
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate);
+
+
+    @GetMapping("${api.prefix}/internal/orders/revenue-chart")
+    ResponseEntity<ApiResponse<RevenueChartDTO>> getRevenueChart(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+    );
 }

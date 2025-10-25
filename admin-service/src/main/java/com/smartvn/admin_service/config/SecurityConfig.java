@@ -55,7 +55,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/admin/products/{id}/toggle-active").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/products/**").hasRole("ADMIN")
 
-                        .requestMatchers("/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/orders/*/status").hasRole("ADMIN") // Chỉ admin mới đổi status
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/orders/stats").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/reviews/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/admin/reviews/**").hasAnyRole("ADMIN", "STAFF")

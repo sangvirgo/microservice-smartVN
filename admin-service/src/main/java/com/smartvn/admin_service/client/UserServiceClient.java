@@ -77,4 +77,7 @@ public interface UserServiceClient {
 
     @PutMapping("${api.prefix}/internal/users/{userId}/role")
     ResponseEntity<ApiResponse<Void>> changeRole(@PathVariable("userId") Long userId, @RequestParam UserRole role);
+
+    @GetMapping("${api.prefix}/internal/users/stats/new-this-month")
+    Long getNewUsersThisMonth();
 }

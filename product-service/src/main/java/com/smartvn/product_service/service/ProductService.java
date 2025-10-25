@@ -627,4 +627,51 @@ public class ProductService {
         product.setQuantitySold(product.getQuantitySold() + request.getQuantity());
         productRepository.save(product);
     }
+
+
+
+    private CreateProductRequest findRequestForProduct(
+            List<CreateProductRequest> requests,
+            Product product) {
+
+        return requests.stream()
+                .filter(req -> req.getTitle().equals(product.getTitle())
+                        && req.getBrand().equals(product.getBrand()))
+                .findFirst()
+                .orElse(null);
+    }
+
+
+    private Product buildProductFromRequest(
+            CreateProductRequest req,
+            Category category) {
+
+        Product product = new Product();
+        product.setTitle(req.getTitle());
+        product.setBrand(req.getBrand());
+        product.setDescription(req.getDescription());
+        product.setCategory(category);
+
+        // Specs
+        product.setColor(req.getColor());
+        product.setWeight(req.getWeight());
+        product.setDimension(req.getDimension());
+        product.setBatteryType(req.getBatteryType());
+        product.setBatteryCapacity(req.getBatteryCapacity());
+        product.setRamCapacity(req.getRamCapacity());
+        product.setRomCapacity(req.getRomCapacity());
+        product.setScreenSize(req.getScreenSize());
+        product.setConnectionPort(req.getConnectionPort());
+        product.setDetailedReview(req.getDetailedReview());
+        product.setPowerfulPerformance(req.getPowerfulPerformance());
+
+        // Defaults
+        product.setIsActive(true);
+        product.setNumRatings(0);
+        product.setAverageRating(0.0);
+        product.setQuantitySold(0L);
+        product.setWarningCount(0);
+
+        return product;
+    }
 }

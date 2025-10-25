@@ -9,6 +9,7 @@ import com.smartvn.user_service.enums.UserRole;
 import com.smartvn.user_service.model.Address;
 import com.smartvn.user_service.model.User;
 import com.smartvn.user_service.repository.AddressRepository;
+import com.smartvn.user_service.repository.UserRepository;
 import com.smartvn.user_service.service.user.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("${api.prefix}/internal/users")
 @RequiredArgsConstructor
@@ -25,6 +29,7 @@ public class InternalUserController {
 
     private final UserService userService;
     private final AddressRepository addressRepository;
+    private final UserRepository userRepository;
 
     /**
      * ✅ Lấy thông tin user (cho reviews)
@@ -110,5 +115,15 @@ public class InternalUserController {
     public ResponseEntity<ApiResponse<Void>> changeRoleUser(@PathVariable Long userId, @RequestParam UserRole role) {
         userService.changeRole(userId, role);
         return ResponseEntity.ok(ApiResponse.success(null, "User role changed successfully."));
+    }
+
+    @GetMapping("/stats/new-this-month")
+    public ResponseEntity<Long> getNewUsersThisMonth() {
+        LocalDateTime startOfMonth = LocalDate.now()
+                .withDayOfMonth(1)
+                .atStartOfDay();
+
+        long count = userRepository.countByCreatedAtAfter(startOfMonth);
+        return ResponseEntity.ok(count);
     }
 }

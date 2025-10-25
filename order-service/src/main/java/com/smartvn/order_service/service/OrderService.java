@@ -3,6 +3,7 @@ package com.smartvn.order_service.service;
 import com.smartvn.order_service.client.ProductServiceClient;
 import com.smartvn.order_service.client.UserServiceClient;
 import com.smartvn.order_service.dto.admin.OrderStatsDTO;
+import com.smartvn.order_service.dto.admin.RevenueChartDTO;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.enums.OrderStatus;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -305,6 +307,36 @@ public class OrderService {
         if (current == OrderStatus.SHIPPED || next == OrderStatus.CANCELLED) {
             throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    public RevenueChartDTO calculateRevenueChart(LocalDate start, LocalDate end) {
+        LocalDateTime startTime = start != null
+                ? start.atStartOfDay()
+                : LocalDate.now().minusMonths(6).atStartOfDay();
+
+        LocalDateTime endTime = end != null
+                ? end.atTime(23, 59, 59)
+                : LocalDateTime.now();
+
+        // Query orders grouped by date
+        List<Object[]> results = orderRepository.findRevenueGroupedByDate(
+                startTime, endTime, OrderStatus.DELIVERED
+        );
+
+        List<RevenueChartDTO.RevenueDataPoint> dataPoints = results.stream()
+                .map(row -> new RevenueChartDTO.RevenueDataPoint(
+                        row[0].toString(), // date
+                        ((BigDecimal) row[1]).doubleValue() // revenue
+                ))
+                .collect(Collectors.toList());
+
+        RevenueChartDTO dto = new RevenueChartDTO();
+        dto.setDataPoints(dataPoints);
+        dto.setTotalRevenue(dataPoints.stream()
+                .mapToDouble(RevenueChartDTO.RevenueDataPoint::getRevenue)
+                .sum());
+
+        return dto;
     }
 
     public OrderStatsDTO calculateOrderStats(LocalDate startDate, LocalDate endDate) {

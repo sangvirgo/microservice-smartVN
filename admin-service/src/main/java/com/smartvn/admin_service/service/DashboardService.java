@@ -5,6 +5,7 @@ import com.smartvn.admin_service.client.ProductServiceClient;
 import com.smartvn.admin_service.client.UserServiceClient;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.order.OverviewStatsDTO;
+import com.smartvn.admin_service.dto.product.ProductStatsDTO;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
 import com.smartvn.admin_service.exceptions.AppException;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class DashboardService {
             UserStatsDTO userStats = userServiceClient.getUserStats()
                     .getBody().getData();
             stats.setTotalUsers(userStats.getTotalUsers());
-            stats.setNewUsersThisMonth(calculateNewUsersThisMonth()); // Cần thêm endpoint
+            stats.setNewUsersThisMonth(userServiceClient.getNewUsersThisMonth());
 
             // ✅ 2. Order stats
             OrderStatsDTO orderStats = orderServiceClient.getOrderStats(null, null)
@@ -39,7 +40,10 @@ public class DashboardService {
             stats.setRevenueThisMonth(orderStats.getRevenueThisMonth());
 
             // ✅ 3. Product stats (cần thêm endpoint trong ProductService)
-            // Tạm thời có thể bỏ qua hoặc gọi getAllProducts với isActive filter
+            ProductStatsDTO productStats = productServiceClient.getProductStats()
+                    .getBody().getData();
+            stats.setTotalProducts(productStats.getTotalProducts());
+            stats.setActiveProducts(productStats.getActiveProducts());
 
         } catch (Exception e) {
             log.error("Error fetching dashboard data: {}", e.getMessage());
@@ -47,14 +51,5 @@ public class DashboardService {
         }
 
         return stats;
-    }
-
-
-
-    private Long calculateNewUsersThisMonth() {
-        // ✅ CẦN THÊM endpoint trong UserService:
-        // GET /api/v1/internal/users/stats/new-this-month
-        // Hoặc trả về 0 nếu chưa implement
-        return 0L;
     }
 }

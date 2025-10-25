@@ -1,10 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.config.FeignClientConfig;
-import com.smartvn.admin_service.dto.product.ProductAdminViewDTO; // Cần tạo DTO này
-import com.smartvn.admin_service.dto.product.InventoryDTO; // Cần tạo DTO này
-import com.smartvn.admin_service.dto.product.ReviewDTO;
-import com.smartvn.admin_service.dto.product.UpdateInventoryRequest; // Cần tạo DTO này
+import com.smartvn.admin_service.dto.product.*;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page;
@@ -115,4 +112,8 @@ public interface ProductServiceClient {
      */
     @DeleteMapping("${api.prefix}/internal/reviews/{reviewId}")
     ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable("reviewId") Long reviewId);
+
+
+    @GetMapping("${api.prefix}/internal/products/stats")
+    ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats();
 }

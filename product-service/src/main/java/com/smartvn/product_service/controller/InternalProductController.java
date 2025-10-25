@@ -5,7 +5,10 @@ import com.smartvn.product_service.dto.InventoryCheckRequest;
 import com.smartvn.product_service.dto.InventoryDTO;
 import com.smartvn.product_service.dto.ProductDTO;
 import com.smartvn.product_service.dto.ProductDetailDTO;
+import com.smartvn.product_service.dto.admin.ProductStatsDTO;
+import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Inventory;
+import com.smartvn.product_service.repository.ProductRepository;
 import com.smartvn.product_service.service.InventoryService;
 import com.smartvn.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 public class InternalProductController {
     private final InventoryService  inventoryService;
     private final ProductService productService;
+    private final ProductRepository  productRepository;
 
     @GetMapping("/products/{productId}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long productId) {
@@ -94,6 +98,14 @@ public class InternalProductController {
 
         productService.increaseQuantitySold(request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats() {
+        ProductStatsDTO stats = new ProductStatsDTO();
+        stats.setTotalProducts(productRepository.count());
+        stats.setActiveProducts(productRepository.countByIsActive(true));
+        return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
     }
 
 }

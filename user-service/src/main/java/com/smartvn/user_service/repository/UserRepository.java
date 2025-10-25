@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +25,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     long countByRole_Name(UserRole roleName);
     long countByIsBanned(boolean isBanned);
     long countByActive(boolean active);
+
+    long countByCreatedAtAfter(LocalDateTime date);
 }

@@ -165,9 +165,17 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     // ============================================
 
 
-    // ============================================
-    // KIỂM TRA TỒN TẠI
-    // ============================================
+    @Query("SELECT DATE(o.createdAt) as date, SUM(o.totalPrice) as revenue " +
+            "FROM Order o " +
+            "WHERE o.createdAt BETWEEN :start AND :end " +
+            "AND o.orderStatus = :status " +
+            "GROUP BY DATE(o.createdAt) " +
+            "ORDER BY date ASC")
+    List<Object[]> findRevenueGroupedByDate(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("status") OrderStatus status
+    );
 
     /**
      * Kiểm tra user có đơn hàng nào không

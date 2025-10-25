@@ -34,4 +34,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
      * Kiểm tra product có tồn tại không
      */
     boolean existsById(Long id);
+
+    boolean existsByTitleAndBrand(String title, String brand);
+    long countByIsActive(boolean isActive);
 }

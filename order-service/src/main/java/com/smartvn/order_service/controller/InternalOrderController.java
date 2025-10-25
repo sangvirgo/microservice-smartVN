@@ -6,6 +6,7 @@ import com.smartvn.order_service.client.UserServiceClient;
 import com.smartvn.order_service.dto.admin.OrderAdminViewDTO;
 import com.smartvn.order_service.dto.admin.OrderItemAdminDTO;
 import com.smartvn.order_service.dto.admin.OrderStatsDTO;
+import com.smartvn.order_service.dto.admin.RevenueChartDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.response.ApiResponse;
 import com.smartvn.order_service.dto.user.AddressDTO;
@@ -153,5 +154,14 @@ public class InternalOrderController {
         OrderAdminViewDTO dto = convertToAdminDTO(order);
 
         return ResponseEntity.ok(ApiResponse.success(dto, "Order detail retrieved"));
+    }
+
+    @GetMapping("/revenue-chart")
+    public ResponseEntity<ApiResponse<RevenueChartDTO>> getRevenueChart(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
+
+        RevenueChartDTO chart = orderService.calculateRevenueChart(startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success(chart, "Revenue chart data"));
     }
 }
