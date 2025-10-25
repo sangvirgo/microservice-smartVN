@@ -5,6 +5,7 @@ import com.smartvn.admin_service.dto.product.InventoryDTO;
 import com.smartvn.admin_service.dto.product.ProductAdminViewDTO;
 import com.smartvn.admin_service.dto.product.UpdateInventoryRequest;
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.exceptions.BaseAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class AdminProductService {
+public class AdminProductService extends BaseAdminService {
     private final ProductServiceClient productServiceClient;
 
     public Page<ProductAdminViewDTO> getAllProducts(int page, int size,
@@ -51,36 +52,4 @@ public class AdminProductService {
         return handleResponse(response, "Failed to add inventory");
     }
 
-    /**
-     * Hàm tiện ích xử lý response từ Feign Client.
-     * @param response ResponseEntity từ Feign client
-     * @param errorMessage Thông báo lỗi nếu request thất bại
-     * @return Dữ liệu từ response nếu thành công
-     * @throws ResponseStatusException Nếu request thất bại hoặc không có dữ liệu
-     */
-    private <T> T handleResponse(ResponseEntity<ApiResponse<T>> response, String errorMessage) {
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
-            return response.getBody().getData();
-        } else {
-            HttpStatus status = (HttpStatus) response.getStatusCode();
-            String message = (response.getBody() != null && response.getBody().getMessage() != null)
-                    ? response.getBody().getMessage()
-                    : errorMessage;
-            log.error("{} - Status: {}, Message: {}", errorMessage, status, message);
-            // Ném lỗi để GlobalExceptionHandler có thể bắt và trả về response chuẩn
-            throw new ResponseStatusException(status, message);
-        }
-    }
-    // Overload cho trường hợp response không có data (Void)
-    private void handleVoidResponse(ResponseEntity<ApiResponse<Void>> response, String errorMessage) {
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            HttpStatus status = (HttpStatus) response.getStatusCode(); // Cast an toàn hơn
-            String message = (response.getBody() != null && response.getBody().getMessage() != null)
-                    ? response.getBody().getMessage()
-                    : errorMessage;
-            log.error("{} - Status: {}, Message: {}", errorMessage, status, message);
-            throw new ResponseStatusException(status, message);
-        }
-        // Thành công thì không cần làm gì
-    }
 }

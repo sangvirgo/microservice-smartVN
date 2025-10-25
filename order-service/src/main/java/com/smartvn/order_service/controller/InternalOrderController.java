@@ -56,15 +56,19 @@ public class InternalOrderController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
-            @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(value = "startDate", required = false) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) LocalDate endDate) {
 
+        // ✅ VALIDATE INPUT ở Controller
         if (page < 0 || size < 1 || size > 100) {
             throw new AppException("Invalid pagination params", HttpStatus.BAD_REQUEST);
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> orders = orderService.searchOrdersForAdmin(search, status, paymentStatus, startDate, endDate, pageable);
+
+        Page<Order> orders = orderService.searchOrdersForAdmin(
+                search, status, paymentStatus, startDate, endDate, pageable);
+
         Page<OrderAdminViewDTO> dtos = orders.map(this::convertToAdminDTO);
 
         return ResponseEntity.ok(ApiResponse.success(dtos, "Orders retrieved", null));
