@@ -84,27 +84,27 @@ public class ProductController {
      * TODO: Thêm @PreAuthorize("hasRole('ADMIN')") khi deploy production
      */
     @PostMapping("/create-multiple")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> createMultipleProducts(
-            @RequestBody List<CreateProductRequest> request) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> bulkImportProducts(
+            @RequestBody List<CreateProductRequest> requests) {
 
-        int totalRequested = request.getProducts() != null ? request.getProducts().size() : 0;
-        log.info("📦 Received bulk product creation request with {} items", totalRequested);
+        log.info("📦 Bulk import {} products", requests.size());
 
-        List<Product> createdProducts = productService.createBulkProducts(request.getProducts());
+        ProductService.BulkImportResult result =
+                productService.createBulkProductsOptimized(requests);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalRequested", totalRequested);
-        result.put("totalCreated", createdProducts.size());
-        result.put("totalFailed", totalRequested - createdProducts.size());
-        result.put("products", createdProducts);
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalRequested", requests.size());
+        summary.put("successCount", result.getSuccessProducts().size());
+        summary.put("failureCount", result.getFailures().size());
+        summary.put("successProducts", result.getSuccessProducts());
+        summary.put("failures", result.getFailures());
 
-        ApiResponse<Map<String, Object>> response = ApiResponse.<Map<String, Object>>builder()
-                .message(String.format("Bulk import completed: %d/%d products created successfully",
-                        createdProducts.size(), totalRequested))
-                .data(result)
-                .build();
-
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return ResponseEntity.ok(
+                ApiResponse.success(summary,
+                        String.format("Imported %d/%d products",
+                                result.getSuccessProducts().size(),
+                                requests.size()))
+        );
     }
 
     /**

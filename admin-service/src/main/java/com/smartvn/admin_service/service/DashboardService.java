@@ -49,6 +49,8 @@ public class DashboardService {
         return stats;
     }
 
+
+
     private Long calculateNewUsersThisMonth() {
         // ✅ CẦN THÊM endpoint trong UserService:
         // GET /api/v1/internal/users/stats/new-this-month

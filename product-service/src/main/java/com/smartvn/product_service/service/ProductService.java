@@ -25,9 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.module.ResolutionException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -196,23 +194,59 @@ public class ProductService {
         return dto;
     }
 
+    // ✅ CÁCH TỐI ƯU HƠN - Batch insert thay vì insert từng cái
     @Transactional
-    public BulkImportResult createBulkProducts(List<CreateProductRequest> requests) {
+    public BulkImportResult createBulkProductsOptimized(
+            List<CreateProductRequest> requests) {
+
         BulkImportResult result = new BulkImportResult();
 
+        // 1. Load all categories 1 lần
+        Set<Long> categoryIds = requests.stream()
+                .map(CreateProductRequest::getCategoryId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Category> categoryMap = categoryRepository
+                .findAllById(categoryIds)
+                .stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        // 2. Prepare products to save
+        List<Product> productsToSave = new ArrayList<>();
+
         for (int i = 0; i < requests.size(); i++) {
+            CreateProductRequest req = requests.get(i);
+
             try {
-                Product product = createSingleProduct(requests.get(i));
-                result.addSuccess(product);
-                log.info("✅ Created product #{}: {}", i+1, product.getTitle());
+                // Validate
+                if (!categoryMap.containsKey(req.getCategoryId())) {
+                    result.addFailure(i, req.getTitle(),
+                            "Category not found");
+                    continue;
+                }
+
+                // Build product
+                Product product = buildProductFromRequest(
+                        req, categoryMap.get(req.getCategoryId()));
+                productsToSave.add(product);
 
             } catch (Exception e) {
-                result.addFailure(i, requests.get(i).getTitle(), e.getMessage());
-                log.error("❌ Failed to create product #{}: {}", i+1, e.getMessage());
-                // KHÔNG throw exception - tiếp tục xử lý các product khác
+                result.addFailure(i, req.getTitle(), e.getMessage());
             }
         }
 
+        // ✅ 3. BATCH INSERT - 1 lần duy nhất
+        List<Product> saved = productRepository.saveAll(productsToSave);
+
+        // 4. Create inventories for saved products
+        for (Product product : saved) {
+            CreateProductRequest req = findRequestForProduct(
+                    requests, product);
+            createInventoriesForProduct(product, req.getVariants());
+            createImagesForProduct(product, req.getImageUrls());
+        }
+
+        result.getSuccessProducts().addAll(saved);
         return result;
     }
 

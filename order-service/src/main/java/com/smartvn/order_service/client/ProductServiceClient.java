@@ -57,6 +57,6 @@ public interface ProductServiceClient {
     @PostMapping("${api.prefix}/internal/inventory/batch-reduce")
     void batchReduceInventory(@RequestBody List<InventoryCheckRequest> requests);
 
-    @PostMapping("${api.prefix}/internal/products//{productId}/increase-sold")
+    @PostMapping("${api.prefix}/internal/products/{productId}/increase-sold")
     void increaseQuantitySold(@RequestBody InventoryCheckRequest request);
 }
