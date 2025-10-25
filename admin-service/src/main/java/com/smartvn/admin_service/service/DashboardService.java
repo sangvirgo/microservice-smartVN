@@ -106,4 +106,36 @@ public class DashboardService extends BaseAdminService {
         // Set all to 0
         return fallback;
     }
+
+    private CompletableFuture<Void> fetchProductStats(OverviewStatsDTO stats) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                ResponseEntity<ApiResponse<ProductStatsDTO>> response =
+                        productServiceClient.getProductStats();
+                ProductStatsDTO productStats = handleResponse(response,
+                        "Failed to fetch product stats");
+
+                stats.setTotalProducts(productStats.getTotalProducts());
+                stats.setActiveProducts(productStats.getActiveProducts());
+            } catch (Exception e) {
+                log.error("Error fetching product stats", e);
+                stats.setTotalProducts(0L);
+                stats.setActiveProducts(0L);
+            }
+        });
+    }
+
+    private void setDefaultOrderStats(OverviewStatsDTO stats) {
+        stats.setTotalOrders(0L);
+        stats.setPendingOrders(0L);
+        stats.setTotalRevenue(0.0);
+        stats.setRevenueThisMonth(0.0);
+    }
+
+    // Thêm method getRevenueChart
+    public RevenueChartDTO getRevenueChart(LocalDate startDate, LocalDate endDate) {
+        ResponseEntity<ApiResponse<RevenueChartDTO>> response =
+                orderServiceClient.getRevenueChart(startDate, endDate);
+        return handleResponse(response, "Failed to fetch revenue chart");
+    }
 }

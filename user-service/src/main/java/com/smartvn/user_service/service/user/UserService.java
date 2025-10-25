@@ -10,6 +10,7 @@ import com.smartvn.user_service.dto.user.UpdateUserRequest;
 import com.smartvn.user_service.dto.user.UserDTO;
 import com.smartvn.user_service.dto.user.UserStatsDTO;
 import com.smartvn.user_service.enums.UserRole;
+import com.smartvn.user_service.exceptions.AppException;
 import com.smartvn.user_service.model.Address;
 import com.smartvn.user_service.model.Role;
 import com.smartvn.user_service.model.User;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements IUserService {
+public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,7 +41,6 @@ public class UserService implements IUserService {
     private final AddressRepository addressRepository;
     private final JwtUtils jwtUtils;
 
-    @Override
     @Transactional
     public void registerUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -62,7 +62,6 @@ public class UserService implements IUserService {
         otpService.sendOtpEmail(request.getEmail(), otp);
     }
 
-    @Override
     public boolean verifyOtp(OtpVerificationRequest request) {
         boolean isValid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (isValid) {
@@ -74,7 +73,6 @@ public class UserService implements IUserService {
         return isValid;
     }
 
-    @Override
     public void forgotPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -82,7 +80,6 @@ public class UserService implements IUserService {
         userRepository.save(user);
     }
 
-    @Override
     public User findUserByJwt(String jwt) {
         if (jwt != null && jwt.startsWith("Bearer ")) {
             jwt = jwt.substring(7);
@@ -92,13 +89,11 @@ public class UserService implements IUserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found with email from JWT: " + email));
     }
 
-    @Override
     public UserDTO findUserProfileByJwt(String jwt) {
         User user = findUserByJwt(jwt);
         return convertUserToDto(user);
     }
 
-    @Override
     @Transactional
     public UserDTO updateUser(Long userId, UpdateUserRequest request) {
         User existingUser = userRepository.findById(userId)
@@ -112,7 +107,6 @@ public class UserService implements IUserService {
         return convertUserToDto(updatedUser);
     }
 
-    @Override
     @Transactional
     public AddressDTO addUserAddress(Long userId, AddAddressRequest request) {
         User user = userRepository.findById(userId)
@@ -131,21 +125,32 @@ public class UserService implements IUserService {
         return new AddressDTO(savedAddress);
     }
 
-    public Page<User> searchUsers(String search, String role, Boolean isBanned, Pageable pageable) {
+    public Page<User> searchUsers(String search, String role,
+                                  Boolean isBanned, Pageable pageable) {
+
         Specification<User> spec = Specification.where(null);
-        if(search != null) {
+
+        if (search != null && !search.trim().isEmpty()) {
+            String searchPattern = "%" + search.trim().toLowerCase() + "%";
             spec = spec.and((root, query, cb) ->
                     cb.or(
-                            cb.like(root.get("email"), "%" + search + "%"),
-                            cb.like(root.get("firstName"), "%" + search + "%"),
-                            cb.like(root.get("lastName"), "%" + search + "%")
+                            cb.like(cb.lower(root.get("email")), searchPattern),
+                            cb.like(cb.lower(root.get("firstName")), searchPattern),
+                            cb.like(cb.lower(root.get("lastName")), searchPattern)
                     )
             );
         }
+
         if (role != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("role").get("name"), UserRole.valueOf(role))
-            );
+            try {
+                UserRole userRole = UserRole.valueOf(role.toUpperCase());
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.get("role").get("name"), userRole)
+                );
+            } catch (IllegalArgumentException e) {
+                throw new AppException("Invalid role: " + role,
+                        HttpStatus.BAD_REQUEST);
+            }
         }
 
         if (isBanned != null) {
@@ -153,6 +158,7 @@ public class UserService implements IUserService {
                     cb.equal(root.get("isBanned"), isBanned)
             );
         }
+
         return userRepository.findAll(spec, pageable);
     }
 

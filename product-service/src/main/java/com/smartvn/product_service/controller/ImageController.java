@@ -16,23 +16,23 @@ public class ImageController {
 
     private final ImageService imageService;
 
-//    /**
-//     * API để upload hình ảnh cho một sản phẩm.
-//     * Cần được bảo vệ (chỉ ADMIN).
-//     */
-//    @PostMapping("/products/{productId}/images")
-//    public ResponseEntity<ApiResponse<Image>> uploadImage(
-//            @PathVariable Long productId,
-//            @RequestParam("file") MultipartFile file) {
-//
-//        Image savedImage = imageService.uploadImageForProduct(productId, file);
-//
-//        ApiResponse<Image> response = ApiResponse.<Image>builder()
-//                .message("Image uploaded successfully.")
-//                .data(savedImage)
-//                .build();
-//        return new ResponseEntity<>(response, HttpStatus.CREATED);
-//    }
+    /**
+     * API để upload hình ảnh cho một sản phẩm.
+     * Cần được bảo vệ (chỉ ADMIN).
+     */
+    @PostMapping("/products/{productId}/images")
+    public ResponseEntity<ApiResponse<Image>> uploadImage(
+            @PathVariable Long productId,
+            @RequestParam("file") MultipartFile file) {
+
+        Image savedImage = imageService.uploadImageForProduct(productId, file);
+
+        ApiResponse<Image> response = ApiResponse.<Image>builder()
+                .message("Image uploaded successfully.")
+                .data(savedImage)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 
     /**
      * API để xóa một hình ảnh.

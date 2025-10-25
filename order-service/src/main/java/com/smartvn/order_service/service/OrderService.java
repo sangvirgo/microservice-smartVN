@@ -226,17 +226,28 @@ public class OrderService {
     }
 
 
-    public Page<Order> searchOrdersForAdmin(String search, String status, String paymentStatus,
-                                            LocalDate startDate, LocalDate endDate, Pageable pageable) {
+    public Page<Order> searchOrdersForAdmin(String search, String status,
+                                            String paymentStatus, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+
         Specification<Order> spec = Specification.where(null);
 
-        if (search != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.or(
-                            cb.equal(root.get("id"), parseLong(search)),
-                            cb.equal(root.get("userId"), parseLong(search))
-                    )
-            );
+        // ✅ SAFE SEARCH - Kiểm tra trước khi parse
+        if (search != null && !search.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) -> {
+                try {
+                    Long searchId = Long.parseLong(search.trim());
+                    return cb.or(
+                            cb.equal(root.get("id"), searchId),
+                            cb.equal(root.get("userId"), searchId)
+                    );
+                } catch (NumberFormatException e) {
+                    // Nếu không phải số, search theo user email (cần join)
+                    return cb.like(
+                            cb.lower(root.get("userId").as(String.class)),
+                            "%" + search.toLowerCase() + "%"
+                    );
+                }
+            });
         }
 
         if (status != null) {
@@ -253,13 +264,15 @@ public class OrderService {
 
         if (startDate != null) {
             spec = spec.and((root, query, cb) ->
-                    cb.greaterThanOrEqualTo(root.get("createdAt"), startDate.atStartOfDay())
+                    cb.greaterThanOrEqualTo(root.get("createdAt"),
+                            startDate.atStartOfDay())
             );
         }
 
         if (endDate != null) {
             spec = spec.and((root, query, cb) ->
-                    cb.lessThanOrEqualTo(root.get("createdAt"), endDate.atTime(23, 59, 59))
+                    cb.lessThanOrEqualTo(root.get("createdAt"),
+                            endDate.atTime(23, 59, 59))
             );
         }
 
