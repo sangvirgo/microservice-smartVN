@@ -3,27 +3,20 @@ package com.smartvn.admin_service.service;
 import com.smartvn.admin_service.client.OrderServiceClient;
 import com.smartvn.admin_service.client.ProductServiceClient;
 import com.smartvn.admin_service.client.UserServiceClient;
-import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.order.OverviewStatsDTO;
 import com.smartvn.admin_service.dto.product.ProductStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
-import com.smartvn.admin_service.exceptions.AppException;
 import com.smartvn.admin_service.exceptions.BaseAdminService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-// ✅ DashboardService được cải thiện
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -130,12 +123,5 @@ public class DashboardService extends BaseAdminService {
         stats.setPendingOrders(0L);
         stats.setTotalRevenue(0.0);
         stats.setRevenueThisMonth(0.0);
-    }
-
-    // Thêm method getRevenueChart
-    public RevenueChartDTO getRevenueChart(LocalDate startDate, LocalDate endDate) {
-        ResponseEntity<ApiResponse<RevenueChartDTO>> response =
-                orderServiceClient.getRevenueChart(startDate, endDate);
-        return handleResponse(response, "Failed to fetch revenue chart");
     }
 }
