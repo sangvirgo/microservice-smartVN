@@ -3,6 +3,7 @@ package com.smartvn.admin_service.service;
 import com.smartvn.admin_service.client.OrderServiceClient;
 import com.smartvn.admin_service.client.ProductServiceClient;
 import com.smartvn.admin_service.client.UserServiceClient;
+import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.order.OverviewStatsDTO;
 import com.smartvn.admin_service.dto.product.ProductStatsDTO;
@@ -15,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -123,5 +127,33 @@ public class DashboardService extends BaseAdminService {
         stats.setPendingOrders(0L);
         stats.setTotalRevenue(0.0);
         stats.setRevenueThisMonth(0.0);
+    }
+
+
+    @CircuitBreaker(name = "dashboardService", fallbackMethod = "getRevenueChartFallback")
+    @Retry(name = "dashboardService")
+    public RevenueChartDTO getRevenueChart(LocalDate startDate, LocalDate endDate) {
+        try {
+            ResponseEntity<ApiResponse<RevenueChartDTO>> response =
+                    orderServiceClient.getRevenueChart(startDate, endDate);
+
+            return handleResponse(response, "Failed to fetch revenue chart");
+        } catch (Exception e) {
+            log.error("Error fetching revenue chart", e);
+            throw e;
+        }
+    }
+
+    /**
+     * ✅ FALLBACK METHOD cho getRevenueChart
+     */
+    public RevenueChartDTO getRevenueChartFallback(LocalDate startDate, LocalDate endDate, Throwable t) {
+        log.error("Revenue chart circuit breaker activated", t);
+
+        RevenueChartDTO fallback = new RevenueChartDTO();
+        fallback.setDataPoints(Collections.emptyList());
+        fallback.setTotalRevenue(0.0);
+
+        return fallback;
     }
 }

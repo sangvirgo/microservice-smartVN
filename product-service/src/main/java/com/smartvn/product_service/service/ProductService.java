@@ -628,7 +628,13 @@ public class ProductService {
         productRepository.save(product);
     }
 
-
+    public Product findById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new AppException(
+                        "Product not found",
+                        HttpStatus.NOT_FOUND
+                ));
+    }
 
     private CreateProductRequest findRequestForProduct(
             List<CreateProductRequest> requests,

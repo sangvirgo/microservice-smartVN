@@ -79,19 +79,31 @@ public class AdminProductController {
         Page<Product> products = productService.searchProductsForAdmin(search, categoryId, isActive, pageable);
         Page<ProductAdminViewDTO> dtos = products.map(this::convertToAdminDTO);
 
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Products retrieved"));
+        return ResponseEntity.ok(ApiResponse.<Page<ProductAdminViewDTO>>builder()
+                .data(dtos)
+                .message("Products retrieved")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
     @PutMapping("/{id}/toggle-active")
     public ResponseEntity<ApiResponse<Void>> toggleActive(@PathVariable Long id) {
         productService.toggleProductActive(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Product status updated"));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Product status updated")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.softDeleteProduct(id); // Set isActive = false
-        return ResponseEntity.ok(ApiResponse.success(null, "Product deleted"));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Product deleted")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
     @GetMapping("/{productId}")
@@ -142,9 +154,11 @@ public class AdminProductController {
 
         inventoryService.deleteInventory(inventoryId);
 
-        return ResponseEntity.ok(
-                ApiResponse.success(null, "Inventory variant deleted")
-        );
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Inventory deleted")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
 
