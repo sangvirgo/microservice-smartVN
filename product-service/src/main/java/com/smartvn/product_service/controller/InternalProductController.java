@@ -89,7 +89,7 @@ public class InternalProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/admin/{productId}/increase-sold")
+    @PostMapping("/products/{productId}/increase-sold")
     public ResponseEntity<Void> increaseQuantitySold(@RequestBody InventoryCheckRequest request) {
 
         productService.increaseQuantitySold(request);

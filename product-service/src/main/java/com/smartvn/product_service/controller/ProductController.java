@@ -2,6 +2,7 @@ package com.smartvn.product_service.controller;
 
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
+import com.smartvn.product_service.dto.admin.CreateProductRequest;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Image;
 import com.smartvn.product_service.model.Product;
@@ -84,7 +85,7 @@ public class ProductController {
      */
     @PostMapping("/create-multiple")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createMultipleProducts(
-            @RequestBody BulkProductRequest request) {
+            @RequestBody List<CreateProductRequest> request) {
 
         int totalRequested = request.getProducts() != null ? request.getProducts().size() : 0;
         log.info("📦 Received bulk product creation request with {} items", totalRequested);

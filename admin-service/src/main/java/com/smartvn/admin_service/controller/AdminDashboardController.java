@@ -1,5 +1,6 @@
 package com.smartvn.admin_service.controller;
 
+import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OverviewStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.service.DashboardService;

@@ -12,6 +12,8 @@ import com.smartvn.product_service.repository.ImageRepository;
 import com.smartvn.product_service.repository.InventoryRepository;
 import com.smartvn.product_service.repository.ProductRepository;
 import com.smartvn.product_service.specification.ProductSpecification;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -194,6 +196,45 @@ public class ProductService {
         return dto;
     }
 
+    @Transactional
+    public BulkImportResult createBulkProducts(List<CreateProductRequest> requests) {
+        BulkImportResult result = new BulkImportResult();
+
+        for (int i = 0; i < requests.size(); i++) {
+            try {
+                Product product = createSingleProduct(requests.get(i));
+                result.addSuccess(product);
+                log.info("✅ Created product #{}: {}", i+1, product.getTitle());
+
+            } catch (Exception e) {
+                result.addFailure(i, requests.get(i).getTitle(), e.getMessage());
+                log.error("❌ Failed to create product #{}: {}", i+1, e.getMessage());
+                // KHÔNG throw exception - tiếp tục xử lý các product khác
+            }
+        }
+
+        return result;
+    }
+
+    @Data
+    public static class BulkImportResult {
+        private List<Product> successProducts = new ArrayList<>();
+        private List<FailureRecord> failures = new ArrayList<>();
+
+        public void addSuccess(Product p) { successProducts.add(p); }
+        public void addFailure(int index, String title, String error) {
+            failures.add(new FailureRecord(index, title, error));
+        }
+
+        @Data
+        @AllArgsConstructor
+        public static class FailureRecord {
+            private int index;
+            private String productTitle;
+            private String errorMessage;
+        }
+    }
+
     private ProductListingDTO toListingDTO(Product product) {
         ProductListingDTO dto = new ProductListingDTO();
         dto.setId(product.getId());
@@ -290,6 +331,24 @@ public class ProductService {
     @Transactional
     public Product createSingleProduct(CreateProductRequest request) {
         log.info("📦 Creating single product: {}", request.getTitle());
+
+        if (productRepository.existsByTitleAndBrand(request.getTitle(), request.getBrand())) {
+            throw new AppException(
+                    "Product with same title and brand already exists",
+                    HttpStatus.CONFLICT
+            );
+        }
+
+        if (request.getImageUrls() != null) {
+            for (var img : request.getImageUrls()) {
+                if (!img.getDownloadUrl().startsWith("http")) {
+                    throw new AppException(
+                            "Invalid image URL: " + img.getDownloadUrl(),
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+            }
+        }
 
         // 1. VALIDATE CATEGORY
         Category category = categoryRepository.findById(request.getCategoryId())

@@ -147,6 +147,8 @@ public class AdminProductController {
         );
     }
 
+
+
     private ProductAdminViewDTO convertToAdminDTO(Product product) {
         ProductAdminViewDTO dto = new ProductAdminViewDTO();
         dto.setId(product.getId());

@@ -174,17 +174,20 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      */
     boolean existsByUserId(Long userId);
 
-    @Query("SELECT CASE WHEN COUNT(o)>0 THEN true ELSE false END " +
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END " +
             "FROM Order o JOIN o.orderItems oi " +
             "WHERE o.userId = :userId " +
             "AND oi.productId = :productId " +
-            "AND o.orderStatus = 'DELIVERED'"
-    )
-    boolean existsByUserIdAndProductIdAndDelivered(@Param("userId") Long userId, @Param("productId") Long productId);
+            "AND o.orderStatus = 'DELIVERED'")
+    boolean existsByUserIdAndProductIdAndDelivered(
+            @Param("userId") Long userId,
+            @Param("productId") Long productId
+    );
 
     @Query("SELECT COUNT(o) FROM Order o WHERE " +
             "(:startDate IS NULL OR o.createdAt >= :startDate) " +
             "AND (:endDate IS NULL OR o.createdAt <= :endDate)")
     Long countByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
 
 }
