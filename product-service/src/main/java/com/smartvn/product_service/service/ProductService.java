@@ -1,9 +1,10 @@
 package com.smartvn.product_service.service;
 
-import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.InventoryCheckRequest;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
+import com.smartvn.product_service.dto.admin.CreateProductRequest;
+import com.smartvn.product_service.dto.admin.UpdateProductRequest;
 import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.*;
 import com.smartvn.product_service.repository.CategoryRepository;
@@ -11,7 +12,6 @@ import com.smartvn.product_service.repository.ImageRepository;
 import com.smartvn.product_service.repository.InventoryRepository;
 import com.smartvn.product_service.repository.ProductRepository;
 import com.smartvn.product_service.specification.ProductSpecification;
-import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -288,44 +288,57 @@ public class ProductService {
     }
 
     @Transactional
-    public List<Product> createBulkProducts(List<BulkProductRequest.ProductItemDTO> productItems) {
-        List<Product> createdProducts = new ArrayList<>();
+    public Product createSingleProduct(CreateProductRequest request) {
+        log.info("📦 Creating single product: {}", request.getTitle());
 
-        for (BulkProductRequest.ProductItemDTO item : productItems) {
-            try {
-                Product product = createProductFromDTO(item);
-                createdProducts.add(product);
-                log.info("✅ Successfully created product: {} (ID: {})", product.getTitle(), product.getId());
-            } catch (Exception e) {
-                log.error("❌ Failed to create product '{}'. Error: {}", item.getTitle(), e.getMessage(), e);
-            }
+        // 1. VALIDATE CATEGORY
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new AppException(
+                        "Category not found with id: " + request.getCategoryId(),
+                        HttpStatus.NOT_FOUND
+                ));
+
+        // 2. VALIDATE VARIANTS
+        if (request.getVariants() == null || request.getVariants().isEmpty()) {
+            throw new AppException(
+                    "Product must have at least one variant",
+                    HttpStatus.BAD_REQUEST
+            );
         }
 
-        log.info("📦 Bulk import completed: {}/{} products created successfully",
-                createdProducts.size(), productItems.size());
+        // 3. CHECK DUPLICATE SIZE
+        List<String> sizes = request.getVariants().stream()
+                .map(CreateProductRequest.CreateInventoryDTO::getSize)
+                .toList();
 
-        return createdProducts;
-    }
+        if (sizes.size() != sizes.stream().distinct().count()) {
+            throw new AppException(
+                    "Duplicate variant sizes found",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
 
-    private Product createProductFromDTO(BulkProductRequest.ProductItemDTO dto) {
-        Category category = getOrCreateCategory(dto.getTopLevelCategory(), dto.getSecondLevelCategory());
-
+        // 4. CREATE PRODUCT
         Product product = new Product();
-        product.setTitle(dto.getTitle());
-        product.setBrand(dto.getBrand());
-        product.setColor(dto.getColor());
-        product.setWeight(dto.getWeight());
-        product.setDimension(dto.getDimension());
-        product.setBatteryType(dto.getBatteryType());
-        product.setBatteryCapacity(dto.getBatteryCapacity());
-        product.setRamCapacity(dto.getRamCapacity());
-        product.setRomCapacity(dto.getRomCapacity());
-        product.setScreenSize(dto.getScreenSize());
-        product.setDetailedReview(dto.getDetailedReview());
-        product.setPowerfulPerformance(dto.getPowerfulPerformance());
-        product.setConnectionPort(dto.getConnectionPort());
-        product.setDescription(dto.getDescription());
+        product.setTitle(request.getTitle());
+        product.setBrand(request.getBrand());
+        product.setDescription(request.getDescription());
         product.setCategory(category);
+
+        // Specifications
+        product.setColor(request.getColor());
+        product.setWeight(request.getWeight());
+        product.setDimension(request.getDimension());
+        product.setBatteryType(request.getBatteryType());
+        product.setBatteryCapacity(request.getBatteryCapacity());
+        product.setRamCapacity(request.getRamCapacity());
+        product.setRomCapacity(request.getRomCapacity());
+        product.setScreenSize(request.getScreenSize());
+        product.setConnectionPort(request.getConnectionPort());
+        product.setDetailedReview(request.getDetailedReview());
+        product.setPowerfulPerformance(request.getPowerfulPerformance());
+
+        // Status
         product.setIsActive(true);
         product.setNumRatings(0);
         product.setAverageRating(0.0);
@@ -333,31 +346,120 @@ public class ProductService {
         product.setWarningCount(0);
 
         Product savedProduct = productRepository.save(product);
+        log.info("✅ Product created with ID: {}", savedProduct.getId());
 
-        if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
-            for (BulkProductRequest.ImageUrlDTO imgDto : dto.getImageUrls()) {
-                Image image = new Image();
-                image.setFileName(imgDto.getFileName());
-                image.setFileType(imgDto.getFileType());
-                image.setDownloadUrl(imgDto.getDownloadUrl());
-                image.setProduct(savedProduct);
-                imageRepository.save(image);
-            }
-        }
+        // 5. CREATE VARIANTS
+        createInventoriesForProduct(savedProduct, request.getVariants());
 
-        if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
-            for (BulkProductRequest.InventoryItemDTO variantDto : dto.getVariants()) {
-                Inventory inventory = new Inventory();
-                inventory.setProduct(savedProduct);
-                inventory.setSize(variantDto.getSize());
-                inventory.setQuantity(variantDto.getQuantity());
-                inventory.setPrice(variantDto.getPrice());
-                inventory.setDiscountPercent(variantDto.getDiscountPercent() != null ? variantDto.getDiscountPercent() : 0);
-                inventoryRepository.save(inventory);
-            }
+        // 6. CREATE IMAGES (if provided)
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            createImagesForProduct(savedProduct, request.getImageUrls());
         }
 
         return savedProduct;
+    }
+
+    /**
+     * ✅ TẠO INVENTORY CHO PRODUCT
+     */
+    private void createInventoriesForProduct(
+            Product product,
+            List<CreateProductRequest.CreateInventoryDTO> variants
+    ) {
+        for (CreateProductRequest.CreateInventoryDTO variantDto : variants) {
+            Inventory inventory = new Inventory();
+            inventory.setProduct(product);
+            inventory.setSize(variantDto.getSize());
+            inventory.setQuantity(variantDto.getQuantity());
+            inventory.setPrice(variantDto.getPrice());
+
+            int discount = variantDto.getDiscountPercent() != null
+                    ? variantDto.getDiscountPercent()
+                    : 0;
+            inventory.setDiscountPercent(discount);
+
+            // ✅ TÍNH TOÁN DISCOUNTED PRICE
+            inventory.calculateDiscountedPrice();
+
+            inventoryRepository.save(inventory);
+            log.debug("  ✓ Created variant: {} - {}đ ({}% off)",
+                    variantDto.getSize(),
+                    variantDto.getPrice(),
+                    discount
+            );
+        }
+    }
+
+    /**
+     * ✅ TẠO IMAGES CHO PRODUCT
+     */
+    private void createImagesForProduct(
+            Product product,
+            List<CreateProductRequest.ImageUrlDTO> imageUrls
+    ) {
+        for (CreateProductRequest.ImageUrlDTO imageDto : imageUrls) {
+            Image image = new Image();
+            image.setProduct(product);
+            image.setDownloadUrl(imageDto.getDownloadUrl());
+            image.setFileName(imageDto.getFileName());
+            image.setFileType(imageDto.getFileType());
+
+            imageRepository.save(image);
+            log.debug("  ✓ Added image: {}", imageDto.getDownloadUrl());
+        }
+    }
+
+    /**
+     * ✅ CẬP NHẬT SẢN PHẨM (Admin)
+     */
+    @Transactional
+    public Product updateProduct(Long productId, UpdateProductRequest request) {
+        log.info("📝 Updating product ID: {}", productId);
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(
+                        "Product not found",
+                        HttpStatus.NOT_FOUND
+                ));
+
+        // Update basic info
+        if (request.getTitle() != null) {
+            product.setTitle(request.getTitle());
+        }
+        if (request.getBrand() != null) {
+            product.setBrand(request.getBrand());
+        }
+        if (request.getDescription() != null) {
+            product.setDescription(request.getDescription());
+        }
+
+        // Update category
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new AppException(
+                            "Category not found",
+                            HttpStatus.NOT_FOUND
+                    ));
+            product.setCategory(category);
+        }
+
+        // Update specifications
+        if (request.getColor() != null) product.setColor(request.getColor());
+        if (request.getWeight() != null) product.setWeight(request.getWeight());
+        if (request.getDimension() != null) product.setDimension(request.getDimension());
+        if (request.getBatteryType() != null) product.setBatteryType(request.getBatteryType());
+        if (request.getBatteryCapacity() != null) product.setBatteryCapacity(request.getBatteryCapacity());
+        if (request.getRamCapacity() != null) product.setRamCapacity(request.getRamCapacity());
+        if (request.getRomCapacity() != null) product.setRomCapacity(request.getRomCapacity());
+        if (request.getScreenSize() != null) product.setScreenSize(request.getScreenSize());
+        if (request.getConnectionPort() != null) product.setConnectionPort(request.getConnectionPort());
+        if (request.getDetailedReview() != null) product.setDetailedReview(request.getDetailedReview());
+        if (request.getPowerfulPerformance() != null) product.setPowerfulPerformance(request.getPowerfulPerformance());
+
+        Product updated = productRepository.save(product);
+        log.info("✅ Product updated: {}", updated.getTitle());
+
+        return updated;
     }
 
     private Category getOrCreateCategory(String topLevelName, String secondLevelName) {

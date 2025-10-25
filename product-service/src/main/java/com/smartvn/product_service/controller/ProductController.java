@@ -1,6 +1,5 @@
 package com.smartvn.product_service.controller;
 
-import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;

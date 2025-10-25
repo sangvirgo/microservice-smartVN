@@ -8,6 +8,7 @@ import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.repository.InventoryRepository;
 import com.smartvn.product_service.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
@@ -113,4 +115,31 @@ public class InventoryService {
 
         return inventoryRepository.save(inv);
     }
+
+    // ✅ THÊM VÀO InventoryService.java
+
+    @Transactional
+    public void deleteInventory(Long inventoryId) {
+        Inventory inventory = inventoryRepository.findById(inventoryId)
+                .orElseThrow(() -> new AppException(
+                        "Inventory not found",
+                        HttpStatus.NOT_FOUND
+                ));
+
+        // Check if this is the last variant
+        Long productId = inventory.getProduct().getId();
+        long variantCount = inventoryRepository.countByProductId(productId);
+
+        if (variantCount <= 1) {
+            throw new AppException(
+                    "Cannot delete the last variant. Product must have at least one variant.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        inventoryRepository.delete(inventory);
+        log.info("✅ Deleted inventory variant: {} - {}",
+                productId, inventory.getSize());
+    }
+
 }

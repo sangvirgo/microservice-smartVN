@@ -26,5 +26,5 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
             "FROM Inventory i WHERE i.product.id = :productId AND i.quantity > 0")
     boolean hasStock(@Param("productId") Long productId);
 
-
+    long countByProductId(Long productId);
 }

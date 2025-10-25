@@ -1,8 +1,8 @@
 package com.smartvn.product_service.controller;
 
 
-import com.smartvn.product_service.dto.BulkProductRequest;
 import com.smartvn.product_service.dto.InventoryCheckRequest;
+import com.smartvn.product_service.dto.InventoryDTO;
 import com.smartvn.product_service.dto.ProductDTO;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.model.Inventory;
@@ -33,10 +33,10 @@ public class InternalProductController {
     }
 
     @GetMapping("/products/{productId}/inventory")
-    public ResponseEntity<List<BulkProductRequest.InventoryItemDTO>> getInventory(@PathVariable Long productId) {
+    public ResponseEntity<List<InventoryDTO>> getInventory(@PathVariable Long productId) {
         List<Inventory> invs = inventoryService.getInventoriesByProduct(productId);
-        List<BulkProductRequest.InventoryItemDTO> dtos = invs.stream()
-                .map(BulkProductRequest.InventoryItemDTO::new)
+        List<InventoryDTO> dtos = invs.stream()
+                .map(InventoryDTO::new)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(dtos);
