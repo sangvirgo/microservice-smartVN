@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api.prefix}/internal/users")
@@ -125,5 +128,31 @@ public class InternalUserController {
 
         long count = userRepository.countByCreatedAtAfter(startOfMonth);
         return ResponseEntity.ok(count);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<List<UserInfoDTO>> getUsersByIds(
+            @RequestBody List<Long> userIds) {
+
+        if (userIds == null || userIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        // ✅ FETCH 1 LẦN từ DB thay vì N queries
+        List<User> users = userRepository.findAllById(userIds);
+
+        List<UserInfoDTO> dtos = users.stream()
+                .map(user -> new UserInfoDTO(
+                        user.getId(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail(),
+                        user.getImageUrl(),
+                        user.isActive(),
+                        user.isBanned()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
 }

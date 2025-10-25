@@ -10,6 +10,7 @@ import com.smartvn.admin_service.dto.product.ProductStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
 import com.smartvn.admin_service.exceptions.AppException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
+// ✅ DashboardService được cải thiện
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,54 +30,110 @@ public class DashboardService {
     private final OrderServiceClient orderServiceClient;
     private final ProductServiceClient productServiceClient;
 
+    @CircuitBreaker(name = "dashboardService", fallbackMethod = "getOverviewFallback")
     public OverviewStatsDTO getOverview() {
         OverviewStatsDTO stats = new OverviewStatsDTO();
 
-        try {
-            // ✅ 1. User stats
-            UserStatsDTO userStats = userServiceClient.getUserStats()
-                    .getBody().getData();
-            stats.setTotalUsers(userStats.getTotalUsers());
-            stats.setNewUsersThisMonth(userServiceClient.getNewUsersThisMonth());
+        // ✅ PARALLEL FETCH với CompletableFuture
+        CompletableFuture<Void> userStatsFuture = CompletableFuture.runAsync(() -> {
+            try {
+                UserStatsDTO userStats = fetchUserStats();
+                stats.setTotalUsers(userStats.getTotalUsers());
+                stats.setNewUsersThisMonth(fetchNewUsersThisMonth());
+            } catch (Exception e) {
+                log.error("Error fetching user stats", e);
+                stats.setTotalUsers(0L);
+                stats.setNewUsersThisMonth(0L);
+            }
+        });
 
-            // ✅ 2. Order stats
-            OrderStatsDTO orderStats = orderServiceClient.getOrderStats(null, null)
-                    .getBody().getData();
-            stats.setTotalOrders(orderStats.getTotalOrders());
-            stats.setPendingOrders(orderStats.getPendingOrders());
-            stats.setTotalRevenue(orderStats.getTotalRevenue());
-            stats.setRevenueThisMonth(orderStats.getRevenueThisMonth());
+        CompletableFuture<Void> orderStatsFuture = CompletableFuture.runAsync(() -> {
+            try {
+                OrderStatsDTO orderStats = fetchOrderStats();
+                stats.setTotalOrders(orderStats.getTotalOrders());
+                stats.setPendingOrders(orderStats.getPendingOrders());
+                stats.setTotalRevenue(orderStats.getTotalRevenue());
+                stats.setRevenueThisMonth(orderStats.getRevenueThisMonth());
+            } catch (Exception e) {
+                log.error("Error fetching order stats", e);
+                setDefaultOrderStats(stats);
+            }
+        });
 
-            // ✅ 3. Product stats (cần thêm endpoint trong ProductService)
-            ProductStatsDTO productStats = productServiceClient.getProductStats()
-                    .getBody().getData();
-            stats.setTotalProducts(productStats.getTotalProducts());
-            stats.setActiveProducts(productStats.getActiveProducts());
+        CompletableFuture<Void> productStatsFuture = CompletableFuture.runAsync(() -> {
+            try {
+                ProductStatsDTO productStats = fetchProductStats();
+                stats.setTotalProducts(productStats.getTotalProducts());
+                stats.setActiveProducts(productStats.getActiveProducts());
+            } catch (Exception e) {
+                log.error("Error fetching product stats", e);
+                stats.setTotalProducts(0L);
+                stats.setActiveProducts(0L);
+            }
+        });
 
-        } catch (Exception e) {
-            log.error("Error fetching dashboard data: {}", e.getMessage());
-            throw new AppException("Cannot load dashboard", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        // ✅ WAIT for all futures
+        CompletableFuture.allOf(userStatsFuture, orderStatsFuture, productStatsFuture)
+                .join();
 
         return stats;
     }
 
+    // ✅ EXTRACT methods để dễ test
+    private UserStatsDTO fetchUserStats() {
+        return Optional.ofNullable(userServiceClient.getUserStats())
+                .map(ResponseEntity::getBody)
+                .map(ApiResponse::getData)
+                .orElseThrow(() -> new AppException(
+                        "User stats unavailable",
+                        HttpStatus.SERVICE_UNAVAILABLE));
+    }
 
-    public RevenueChartDTO getRevenueChart(LocalDate startDate, LocalDate endDate) {
-        try {
-            ResponseEntity<ApiResponse<RevenueChartDTO>> response =
-                    orderServiceClient.getRevenueChart(startDate, endDate);
+    private Long fetchNewUsersThisMonth() {
+        return Optional.ofNullable(userServiceClient.getNewUsersThisMonth())
+                .map(ResponseEntity::getBody)
+                .orElse(0L);
+    }
 
-            if (response.getStatusCode().is2xxSuccessful() &&
-                    response.getBody() != null &&
-                    response.getBody().getData() != null) {
-                return response.getBody().getData();
-            }
+    private OrderStatsDTO fetchOrderStats() {
+        return Optional.ofNullable(
+                        orderServiceClient.getOrderStats(null, null))
+                .map(ResponseEntity::getBody)
+                .map(ApiResponse::getData)
+                .orElseThrow(() -> new AppException(
+                        "Order stats unavailable",
+                        HttpStatus.SERVICE_UNAVAILABLE));
+    }
 
-            throw new AppException("Cannot fetch revenue chart", HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            log.error("Error fetching revenue chart: {}", e.getMessage());
-            throw new AppException("Revenue data unavailable", HttpStatus.SERVICE_UNAVAILABLE);
-        }
+    private ProductStatsDTO fetchProductStats() {
+        return Optional.ofNullable(productServiceClient.getProductStats())
+                .map(ResponseEntity::getBody)
+                .map(ApiResponse::getData)
+                .orElseThrow(() -> new AppException(
+                        "Product stats unavailable",
+                        HttpStatus.SERVICE_UNAVAILABLE));
+    }
+
+    private void setDefaultOrderStats(OverviewStatsDTO stats) {
+        stats.setTotalOrders(0L);
+        stats.setPendingOrders(0L);
+        stats.setTotalRevenue(0.0);
+        stats.setRevenueThisMonth(0.0);
+    }
+
+    // ✅ FALLBACK method
+    public OverviewStatsDTO getOverviewFallback(Throwable t) {
+        log.error("Dashboard service circuit breaker activated", t);
+        OverviewStatsDTO fallback = new OverviewStatsDTO();
+        // Set all to 0
+        fallback.setTotalUsers(0L);
+        fallback.setNewUsersThisMonth(0L);
+        fallback.setTotalOrders(0L);
+        fallback.setPendingOrders(0L);
+        fallback.setTotalRevenue(0.0);
+        fallback.setRevenueThisMonth(0.0);
+        fallback.setTotalProducts(0L);
+        fallback.setActiveProducts(0L);
+        return fallback;
     }
 }

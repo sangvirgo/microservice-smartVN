@@ -17,6 +17,8 @@ import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.model.OrderItem;
 import com.smartvn.order_service.repository.OrderRepository;
 import com.smartvn.order_service.service.OrderService;
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -72,31 +74,24 @@ public class InternalOrderController {
         OrderAdminViewDTO dto = new OrderAdminViewDTO();
         dto.setId(order.getId());
         dto.setUserId(order.getUserId());
-        try {
-            UserDTO user = userServiceClient.getUserById(order.getUserId());
-            dto.setUserEmail(user.getEmail());
-            dto.setUserName(user.getFirstName() + " " + user.getLastName());
-        } catch (Exception e) {
-            log.warn("Failed to fetch user info: {}", e.getMessage());
-        }
-
-        try {
-            AddressDTO address = userServiceClient.getAddressById(order.getShippingAddressId());
-            dto.setShippingAddressId(address.getId());
-            dto.setShippingAddressDetails(address.getFullAddress());
-        } catch (Exception e) {
-            log.warn("Failed to fetch address: {}", e.getMessage());
-        }
-
         dto.setOrderStatus(order.getOrderStatus().name());
         dto.setPaymentStatus(order.getPaymentStatus().name());
-        dto.setPaymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null);
+        dto.setPaymentMethod(order.getPaymentMethod() != null
+                ? order.getPaymentMethod().name()
+                : null);
         dto.setTotalPrice(order.getTotalPrice());
         dto.setTotalItems(order.getTotalItems());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setDeliveryDate(order.getDeliveryDate());
+        dto.setShippingAddressId(order.getShippingAddressId());
 
-        // ✅ Map order items
+        // ✅ FETCH user info (with circuit breaker fallback)
+        enrichWithUserInfo(dto, order.getUserId());
+
+        // ✅ FETCH address info (with fallback)
+        enrichWithAddressInfo(dto, order.getShippingAddressId());
+
+        // ✅ MAP order items (batch enrich sau)
         if (order.getOrderItems() != null) {
             dto.setOrderItems(order.getOrderItems().stream()
                     .map(this::convertToOrderItemAdminDTO)
@@ -169,5 +164,41 @@ public class InternalOrderController {
 
         RevenueChartDTO chart = orderService.calculateRevenueChart(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(chart, "Revenue chart data", null));
+    }
+
+
+    @CircuitBreaker(name = "userService", fallbackMethod = "userInfoFallback")
+    private void enrichWithUserInfo(OrderAdminViewDTO dto, Long userId) {
+        try {
+            UserDTO user = userServiceClient.getUserById(userId);
+            dto.setUserEmail(user.getEmail());
+            dto.setUserName(user.getFirstName() + " " + user.getLastName());
+        } catch (FeignException e) {
+            log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
+            dto.setUserEmail("Unknown");
+            dto.setUserName("Unknown User");
+        }
+    }
+
+    private void userInfoFallback(OrderAdminViewDTO dto, Long userId, Throwable t) {
+        log.error("User service unavailable for userId {}", userId);
+        dto.setUserEmail("Service Unavailable");
+        dto.setUserName("N/A");
+    }
+
+    @CircuitBreaker(name = "userService", fallbackMethod = "addressInfoFallback")
+    private void enrichWithAddressInfo(OrderAdminViewDTO dto, Long addressId) {
+        try {
+            AddressDTO address = userServiceClient.getAddressById(addressId);
+            dto.setShippingAddressDetails(address.getFullAddress());
+        } catch (FeignException e) {
+            log.warn("Failed to fetch address {}: {}", addressId, e.getMessage());
+            dto.setShippingAddressDetails("Address not available");
+        }
+    }
+
+    private void addressInfoFallback(OrderAdminViewDTO dto, Long addressId, Throwable t) {
+        log.error("User service unavailable for addressId {}", addressId);
+        dto.setShippingAddressDetails("N/A");
     }
 }
