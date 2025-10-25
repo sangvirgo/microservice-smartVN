@@ -1,14 +1,11 @@
 package com.smartvn.admin_service.client;
 
-import com.smartvn.admin_service.dto.product.ReviewDTO;
+import com.smartvn.admin_service.dto.product.*;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.smartvn.admin_service.dto.product.ProductAdminViewDTO;
-import com.smartvn.admin_service.dto.product.InventoryDTO;
-import com.smartvn.admin_service.dto.product.UpdateInventoryRequest;
 
 @Slf4j
 public class ProductServiceFallback implements ProductServiceClient {
@@ -75,5 +72,21 @@ public class ProductServiceFallback implements ProductServiceClient {
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("Product service đang bảo trì. Vui lòng thử lại sau."));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats() {
+        log.error("Product Service unavailable. Returning zero stats.");
+
+        ProductStatsDTO emptyStats = new ProductStatsDTO();
+        emptyStats.setTotalProducts(0L);
+        emptyStats.setActiveProducts(0L);
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.success(
+                        emptyStats,
+                        "Service unavailable"
+                ));
     }
 }

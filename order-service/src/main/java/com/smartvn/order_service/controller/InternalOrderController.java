@@ -12,6 +12,7 @@ import com.smartvn.order_service.dto.response.ApiResponse;
 import com.smartvn.order_service.dto.user.AddressDTO;
 import com.smartvn.order_service.dto.user.UserDTO;
 import com.smartvn.order_service.enums.OrderStatus;
+import com.smartvn.order_service.exceptions.AppException;
 import com.smartvn.order_service.model.Order;
 import com.smartvn.order_service.model.OrderItem;
 import com.smartvn.order_service.repository.OrderRepository;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,11 +57,15 @@ public class InternalOrderController {
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
+        if (page < 0 || size < 1 || size > 100) {
+            throw new AppException("Invalid pagination params", HttpStatus.BAD_REQUEST);
+        }
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Order> orders = orderService.searchOrdersForAdmin(search, status, paymentStatus, startDate, endDate, pageable);
         Page<OrderAdminViewDTO> dtos = orders.map(this::convertToAdminDTO);
 
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Orders retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(dtos, "Orders retrieved", null));
     }
 
     private OrderAdminViewDTO convertToAdminDTO(Order order) {
@@ -131,7 +137,7 @@ public class InternalOrderController {
         Order updated = orderService.updateOrderStatus(orderId, OrderStatus.valueOf(newStatus));
         OrderAdminViewDTO dto = convertToAdminDTO(updated);
 
-        return ResponseEntity.ok(ApiResponse.success(dto, "Order status updated"));
+        return ResponseEntity.ok(ApiResponse.success(dto, "Order status updated", null));
     }
 
     /**
@@ -143,7 +149,7 @@ public class InternalOrderController {
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         OrderStatsDTO stats = orderService.calculateOrderStats(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved", null));
     }
 
     @GetMapping("/admin/{orderId}")
@@ -153,7 +159,7 @@ public class InternalOrderController {
         Order order = orderService.findOrderById(orderId);
         OrderAdminViewDTO dto = convertToAdminDTO(order);
 
-        return ResponseEntity.ok(ApiResponse.success(dto, "Order detail retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(dto, "Order detail retrieved", null));
     }
 
     @GetMapping("/revenue-chart")
@@ -162,6 +168,6 @@ public class InternalOrderController {
             @RequestParam(required = false) LocalDate endDate) {
 
         RevenueChartDTO chart = orderService.calculateRevenueChart(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(chart, "Revenue chart data"));
+        return ResponseEntity.ok(ApiResponse.success(chart, "Revenue chart data", null));
     }
 }

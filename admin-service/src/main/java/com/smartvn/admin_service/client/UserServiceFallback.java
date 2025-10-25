@@ -65,4 +65,10 @@ public class UserServiceFallback implements UserServiceClient{
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));
     }
+
+    @Override
+    public Long getNewUsersThisMonth() {
+        log.error("User Service unavailable. Cannot get new users count.");
+        return 0L; // Trả về 0 thay vì throw exception
+    }
 }

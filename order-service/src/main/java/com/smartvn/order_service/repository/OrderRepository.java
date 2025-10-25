@@ -170,7 +170,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             "WHERE o.createdAt BETWEEN :start AND :end " +
             "AND o.orderStatus = :status " +
             "GROUP BY DATE(o.createdAt) " +
-            "ORDER BY date ASC")
+            "ORDER BY DATE(o.createdAt) ASC")
     List<Object[]> findRevenueGroupedByDate(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
