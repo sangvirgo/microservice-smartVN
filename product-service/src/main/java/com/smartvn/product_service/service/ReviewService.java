@@ -5,6 +5,7 @@ import com.smartvn.product_service.client.UserServiceClient;
 import com.smartvn.product_service.dto.ReviewDTO;
 import com.smartvn.product_service.dto.ReviewRequest;
 import com.smartvn.product_service.dto.UserInfoDTO;
+import com.smartvn.product_service.dto.admin.UserDTO;
 import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.model.Review;
@@ -158,8 +159,13 @@ public class ReviewService {
         reviewRepository.delete(review);
 
         // increase the count of user
+        UserDTO userDTO = userServiceClient.getUserById(review.getUserId());
+        userDTO.setWarningCount(userDTO.getWarningCount() + 1);
 
-        // ✅ Recount rating sau khi xóa
+        if(userDTO.getWarningCount() >=3) {
+            userServiceClient.banUser(review.getUserId());
+        }
+
         updateProductRating(review.getProduct().getId());
     }
 }

@@ -42,8 +42,8 @@ public interface UserServiceClient {
      * @param userId ID của người dùng
      * @return UserDTO
      */
-    @GetMapping("${api.prefix}/internal/users/{userId}")
-    ResponseEntity<ApiResponse<UserDTO>> getUserById(@PathVariable("userId") Long userId);
+    @GetMapping("${api.prefix}/internal/users/admin/{userId}")
+    UserDTO getUserById(@PathVariable("userId") Long userId);
 
 
     /**

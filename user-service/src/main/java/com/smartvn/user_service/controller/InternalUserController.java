@@ -13,6 +13,7 @@ import com.smartvn.user_service.repository.UserRepository;
 import com.smartvn.user_service.service.user.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("${api.prefix}/internal/users")
 @RequiredArgsConstructor
@@ -44,6 +46,15 @@ public class InternalUserController {
 
         UserInfoDTO userInfo = userService.getUserInfo(userId);
         return ResponseEntity.ok(userInfo);
+    }
+
+    @GetMapping("/admin/{userId}")
+    public ResponseEntity<UserDTO> getUserDTO(
+            @PathVariable("userId") Long userId) {
+
+        UserDTO userDTO = userService.getUserById(userId);
+        log.info("userDTO(user service): {}", userDTO);
+        return ResponseEntity.ok(userDTO);
     }
 
     @GetMapping("/{userId}/addresses/{addressId}/validate")

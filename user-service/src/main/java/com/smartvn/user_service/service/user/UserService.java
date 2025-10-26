@@ -29,6 +29,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,6 +70,8 @@ public class UserService {
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new EntityNotFoundException("User not found for OTP verification"));
             user.setActive(true);
+            user.setUpdatedAt(LocalDateTime.now());
+            user.setCreatedAt(LocalDateTime.now());
             userRepository.save(user);
         }
         return isValid;
@@ -102,6 +106,7 @@ public class UserService {
         existingUser.setFirstName(request.getFirstName());
         existingUser.setLastName(request.getLastName());
         existingUser.setPhone(request.getPhoneNumber());
+        existingUser.setUpdatedAt(LocalDateTime.now());
 
         User updatedUser = userRepository.save(existingUser);
         return convertUserToDto(updatedUser);
@@ -246,5 +251,11 @@ public class UserService {
                 user.isActive(),
                 user.isBanned()
         );
+    }
+
+    public UserDTO getUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
+        return convertUserToDto(user);
     }
 }

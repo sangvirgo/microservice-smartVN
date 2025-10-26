@@ -2,6 +2,7 @@ package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.enums.UserRole;
+import com.smartvn.admin_service.exceptions.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -20,11 +21,14 @@ public class UserServiceFallback implements UserServiceClient{
     }
 
     @Override
-    public ResponseEntity<ApiResponse<UserDTO>> getUserById(Long userId) {
+    public UserDTO getUserById(Long userId) {
         log.error("User Service unavailable. Returning empty result.");
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));
+        UserDTO fallback = new UserDTO();
+        fallback.setId(userId);
+        fallback.setFirstName("Unknown");
+        fallback.setLastName("User");
+        fallback.setEmail("unavailable@system.com");
+        return fallback;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.smartvn.admin_service.enums.UserRole;
 import com.smartvn.admin_service.exceptions.BaseAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +39,9 @@ public class AdminUserService extends BaseAdminService {
      */
     public UserDTO getUserById(Long userId) {
         log.info("Getting user details for ID: {}", userId);
-        ResponseEntity<ApiResponse<UserDTO>> response = userServiceClient.getUserById(userId);
-        return handleResponse(response, "Failed to get user details for ID: " + userId);
+        UserDTO response = userServiceClient.getUserById(userId);
+        log.info("userDTO(admin service): {}", response);
+        return response;
     }
 
     /**
