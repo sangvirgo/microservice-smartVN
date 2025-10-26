@@ -381,11 +381,11 @@ public class ProductService {
             );
         }
 
-        if (request.getImageUrls() != null) {
+        if (request.getImageUrls() != null || request.getImageUrls().isEmpty()) {
             for (var img : request.getImageUrls()) {
                 if (!img.getDownloadUrl().startsWith("http")) {
                     throw new AppException(
-                            "Invalid image URL: " + img.getDownloadUrl(),
+                            "Product must have at least one image",
                             HttpStatus.BAD_REQUEST
                     );
                 }

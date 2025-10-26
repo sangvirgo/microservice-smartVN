@@ -5,6 +5,7 @@ import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.service.AdminProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("${api.prefix}/admin/products")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminProductController {
     private final AdminProductService productService;
 
@@ -93,8 +95,10 @@ public class AdminProductController {
      */
     @PostMapping("/bulk")
     public ResponseEntity<ApiResponse<?>> createBulkProducts(
-            @RequestBody @Valid List<CreateProductRequest> requests) {
+            @RequestBody List<CreateProductRequest> requests) {
 
+        log.info("📦 Bulk creating {} products", requests.size());
+        log.info("📦 Bulk creating {} products", requests);
         Map<String, Object> result = productService.createBulkProducts(requests);
         return ResponseEntity
                 .status(HttpStatus.CREATED)

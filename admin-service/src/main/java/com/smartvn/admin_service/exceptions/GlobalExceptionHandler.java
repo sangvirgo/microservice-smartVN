@@ -9,6 +9,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -78,5 +79,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ex.getStatus())
                 .body(ApiResponse.error(ex.getMessage(), ex.getStatus(), "APP_ERROR"));
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex) {
+
+        Map<String, Object> errors = new HashMap<>();
+
+        // ✅ LOG TOÀN BỘ EXCEPTION
+        log.error("❌ FULL VALIDATION ERROR: ", ex);
+
+        // ✅ Extract validation results
+        ex.getAllValidationResults().forEach(result -> {
+            String paramName = result.getMethodParameter().getParameterName();
+            log.error("  → Parameter: {}", paramName);
+
+            result.getResolvableErrors().forEach(error -> {
+                String msg = error.getDefaultMessage();
+                log.error("    ↳ Error: {}", msg);
+                errors.put(paramName != null ? paramName : "unknown", msg);
+            });
+        });
+
+        // ✅ THÊM LOG RAW MESSAGE
+        log.error("Raw message: {}", ex.getMessage());
+        log.error("Detailed message: {}", ex.getDetailMessageCode());
+
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Validation failed: " + errors,
+                        HttpStatus.BAD_REQUEST, "VALIDATION_ERROR"));
     }
 }

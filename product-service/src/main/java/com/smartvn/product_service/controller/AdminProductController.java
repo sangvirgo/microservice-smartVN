@@ -231,16 +231,27 @@ public class AdminProductController {
         dto.setAverageRating(product.getAverageRating());
         dto.setNumRatings(product.getNumRatings());
         dto.setCreatedAt(product.getCreatedAt());
-        dto.setImageUrl(product.getImages().getFirst().getDownloadUrl());
+
+        // ✅ FIX: Kiểm tra images có tồn tại không
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            dto.setImageUrl(product.getImages().get(0).getDownloadUrl());
+        } else {
+            dto.setImageUrl(null); // hoặc set default image URL
+        }
 
         if (product.getCategory() != null) {
-            dto.setCategoryName(product.getCategory().getParentCategory().getName());
+            // ✅ FIX: Kiểm tra parent category có tồn tại không
+            if (product.getCategory().getParentCategory() != null) {
+                dto.setCategoryName(product.getCategory().getParentCategory().getName());
+            } else {
+                dto.setCategoryName(product.getCategory().getName());
+            }
         }
 
         // Map inventories
         if (product.getInventories() != null) {
             dto.setInventories(product.getInventories().stream()
-                    .map(InventoryDTO::new) // Cần tạo constructor trong InventoryDTO
+                    .map(InventoryDTO::new)
                     .collect(Collectors.toList()));
         }
 
