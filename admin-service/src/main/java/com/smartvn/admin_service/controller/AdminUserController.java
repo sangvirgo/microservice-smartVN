@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("${api.prefix}/admin/users")
 @RequiredArgsConstructor
@@ -62,8 +64,24 @@ public class AdminUserController {
     }
 
     @PutMapping("/{userId}/role")
-    public ResponseEntity<ApiResponse<?>> changeRole(@PathVariable Long userId ,@RequestParam UserRole role) {
-        adminUserService.changeRole(userId, role);
-        return ResponseEntity.ok(ApiResponse.success(null, "Role changed"));
+    public ResponseEntity<ApiResponse<?>> changeRole(
+            @PathVariable Long userId,
+            @RequestBody Map<String, String> request
+    ) {
+        String roleStr = request.get("role");
+
+        if (roleStr == null || roleStr.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Role is required"));
+        }
+
+        try {
+            UserRole role = UserRole.valueOf(roleStr.toUpperCase());
+            adminUserService.changeRole(userId, role);
+            return ResponseEntity.ok(ApiResponse.success(null, "Role changed successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid role. Allowed values: ADMIN, STAFF, CUSTOMER"));
+        }
     }
 }

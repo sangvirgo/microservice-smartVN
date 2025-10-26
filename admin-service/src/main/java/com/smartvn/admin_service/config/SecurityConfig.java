@@ -22,6 +22,7 @@ public class SecurityConfig {
     private final JwtEntryPoint authEntryPoint; // Xử lý lỗi khi authentication thất bại
     private final JwtAuthFilter jwtAuthFilter;   // Filter để đọc JWT và thiết lập Authentication context
     private final AccessDeniedHandler accessDeniedHandler; // Xử lý lỗi khi user không có quyền truy cập
+    private final ApiKeyAuthFilter apiKeyAuthFilter; // ✅ Inject ApiKeyAuthFilter
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -67,6 +68,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 // Thêm filter JWT vào trước filter mặc định
+                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

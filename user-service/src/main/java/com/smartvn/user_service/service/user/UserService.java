@@ -20,8 +20,10 @@ import com.smartvn.user_service.repository.UserRepository;
 import com.smartvn.user_service.security.jwt.JwtUtils;
 import com.smartvn.user_service.service.otp.OtpService;
 import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -42,6 +44,8 @@ public class UserService {
     private final OtpService otpService;
     private final AddressRepository addressRepository;
     private final JwtUtils jwtUtils;
+//    @Autowired
+//    private EntityManager entityManager; // ✅ Thêm
 
     @Transactional
     public void registerUser(RegisterRequest request) {
@@ -201,6 +205,8 @@ public class UserService {
         }
 
         userRepository.save(user);
+//        userRepository.flush(); // ✅ Force flush
+//        entityManager.clear(); // ✅ Clear cache
     }
 
     public UserStatsDTO calculateUserStats() {
@@ -224,6 +230,7 @@ public class UserService {
         userDTO.setRole(user.getRole() != null ? user.getRole().getName().name() : null);
         userDTO.setMobile(user.getPhone());
         userDTO.setActive(user.isActive());
+        userDTO.setWarningCount(user.getWarningCount());
         userDTO.setBanned(user.isBanned());
         userDTO.setCreatedAt(user.getCreatedAt());
         userDTO.setImageUrl(user.getImageUrl());

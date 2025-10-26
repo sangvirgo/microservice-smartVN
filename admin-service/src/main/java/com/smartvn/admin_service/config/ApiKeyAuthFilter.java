@@ -19,25 +19,27 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     private static final String API_KEY_HEADER = "X-API-KEY";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Chỉ áp dụng filter này cho các đường dẫn internal
-        if (request.getServletPath().startsWith("/api/v1/internal/")) {
+        String path = request.getServletPath();
+
+        // ✅ CHỈ xử lý /internal/** paths
+        if (path.startsWith("/api/v1/internal/")) {
             String requestApiKey = request.getHeader(API_KEY_HEADER);
 
-            if (secretApiKey.equals(requestApiKey)) {
-                // Key hợp lệ, cho phép request đi tiếp
-                filterChain.doFilter(request, response);
-            } else {
-                // Key không hợp lệ, trả về lỗi 401 Unauthorized
+            if (!secretApiKey.equals(requestApiKey)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid API Key");
-                return; // Dừng chuỗi filter
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Invalid or missing API Key\"}");
+                return; // ❌ DỪNG chain nếu sai key
             }
-        } else {
-            // Nếu không phải đường dẫn internal, bỏ qua và đi tiếp
-            filterChain.doFilter(request, response);
+            // ✅ Key hợp lệ → Tiếp tục
         }
+
+        // ✅ Cho TẤT CẢ requests đi tiếp (kể cả non-internal)
+        filterChain.doFilter(request, response);
     }
 }
