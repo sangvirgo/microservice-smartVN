@@ -32,6 +32,7 @@ public interface ProductServiceClient {
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "isActive", required = false) Boolean isActive);
 
+
     /**
      * Lấy chi tiết sản phẩm cho admin.
      * Có thể dùng endpoint public hoặc tạo endpoint internal riêng nếu cần thêm thông tin.

@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.module.ResolutionException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -437,6 +438,7 @@ public class ProductService {
         product.setAverageRating(0.0);
         product.setQuantitySold(0L);
         product.setWarningCount(0);
+        product.setUpdatedAt(LocalDateTime.now());
 
         Product savedProduct = productRepository.save(product);
         log.info("✅ Product created with ID: {}", savedProduct.getId());
@@ -461,6 +463,7 @@ public class ProductService {
     ) {
         for (CreateProductRequest.CreateInventoryDTO variantDto : variants) {
             Inventory inventory = new Inventory();
+            product.setUpdatedAt(LocalDateTime.now());
             inventory.setProduct(product);
             inventory.setSize(variantDto.getSize());
             inventory.setQuantity(variantDto.getQuantity());
@@ -470,6 +473,7 @@ public class ProductService {
                     ? variantDto.getDiscountPercent()
                     : 0;
             inventory.setDiscountPercent(discount);
+            inventory.setUpdatedAt(LocalDateTime.now());
 
             // ✅ TÍNH TOÁN DISCOUNTED PRICE
             inventory.calculateDiscountedPrice();
@@ -548,6 +552,7 @@ public class ProductService {
         if (request.getConnectionPort() != null) product.setConnectionPort(request.getConnectionPort());
         if (request.getDetailedReview() != null) product.setDetailedReview(request.getDetailedReview());
         if (request.getPowerfulPerformance() != null) product.setPowerfulPerformance(request.getPowerfulPerformance());
+        product.setUpdatedAt(LocalDateTime.now());
 
         Product updated = productRepository.save(product);
         log.info("✅ Product updated: {}", updated.getTitle());

@@ -29,6 +29,14 @@ public class AdminProductController {
         return ResponseEntity.ok(ApiResponse.success(products, "Products retrieved"));
     }
 
+    @GetMapping("/{productId}")
+    public ResponseEntity<ApiResponse<?>> getProductsById(@PathVariable Long productId) {
+
+        Page<ProductAdminViewDTO> products =
+                productService.getAllProducts(page, size, search, categoryId, isActive);
+        return ResponseEntity.ok(ApiResponse.success(products, "Products retrieved"));
+    }
+
     @PutMapping("/{id}/toggle-active")
     public ResponseEntity<ApiResponse<?>> toggleActive(@PathVariable Long id) {
         productService.toggleActive(id);

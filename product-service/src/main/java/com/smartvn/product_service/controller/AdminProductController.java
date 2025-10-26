@@ -169,15 +169,14 @@ public class AdminProductController {
         dto.setTitle(product.getTitle());
         dto.setBrand(product.getBrand());
         dto.setActive(product.getIsActive());
-        dto.setWarningCount(product.getWarningCount());
         dto.setQuantitySold(product.getQuantitySold());
         dto.setAverageRating(product.getAverageRating());
         dto.setNumRatings(product.getNumRatings());
         dto.setCreatedAt(product.getCreatedAt());
+        dto.setImageUrl(product.getImages().getFirst().getDownloadUrl());
 
         if (product.getCategory() != null) {
-            dto.setCategoryId(product.getCategory().getId());
-            dto.setCategoryName(product.getCategory().getName());
+            dto.setCategoryName(product.getCategory().getParentCategory().getName());
         }
 
         // Map inventories

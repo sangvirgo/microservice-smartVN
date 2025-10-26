@@ -27,6 +27,10 @@ public class AdminProductService extends BaseAdminService {
         return handleResponse(response, "Failed to get products");
     }
 
+    public Page<ProductAdminViewDTO> getProductById(Long productId) {
+        ResponseEntity<ApiResponse<Page<ProductAdminViewDTO>>> rs = productServiceClient.
+    }
+
     public void toggleActive(Long productId) {
         ResponseEntity<ApiResponse<Void>> response =
                 productServiceClient.toggleProductActive(productId);
