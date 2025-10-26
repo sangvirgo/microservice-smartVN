@@ -5,8 +5,13 @@ import com.smartvn.admin_service.dto.product.*;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Feign Client để giao tiếp với Product Service.
@@ -117,4 +122,46 @@ public interface ProductServiceClient {
 
     @GetMapping("${api.prefix}/internal/products/stats")
     ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats();
+
+    /**
+     * ✅ TẠO SINGLE PRODUCT
+     */
+    @PostMapping("${api.prefix}/internal/products/admin")
+    ResponseEntity<ApiResponse<ProductAdminViewDTO>> createProduct(
+            @RequestBody CreateProductRequest request);
+
+    /**
+     * ✅ TẠO BULK PRODUCTS
+     */
+    @PostMapping("${api.prefix}/internal/products/admin/bulk")
+    ResponseEntity<ApiResponse<Map<String, Object>>> createBulkProducts(
+            @RequestBody List<CreateProductRequest> requests);
+
+    /**
+     * ✅ CẬP NHẬT PRODUCT
+     */
+    @PutMapping("${api.prefix}/internal/products/admin/{productId}")
+    ResponseEntity<ApiResponse<ProductAdminViewDTO>> updateProduct(
+            @PathVariable("productId") Long productId,
+            @RequestBody UpdateProductRequest request);
+
+    /**
+     * ✅ UPLOAD IMAGE
+     * NOTE: Feign không hỗ trợ tốt MultipartFile,
+     * có thể cần dùng cách khác (Base64 string hoặc URL)
+     */
+    @PostMapping(
+            value = "${api.prefix}/internal/products/admin/{productId}/images",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    ResponseEntity<ApiResponse<ImageDTO>> uploadImage(
+            @PathVariable("productId") Long productId,
+            @RequestPart("file") MultipartFile file);
+
+    /**
+     * ✅ XÓA IMAGE
+     */
+    @DeleteMapping("${api.prefix}/internal/products/admin/images/{imageId}")
+    ResponseEntity<ApiResponse<Void>> deleteImage(
+            @PathVariable("imageId") Long imageId);
 }
