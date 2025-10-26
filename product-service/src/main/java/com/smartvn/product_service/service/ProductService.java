@@ -195,22 +195,16 @@ public class ProductService {
         return dto;
     }
 
-    // ✅ CÁCH TỐI ƯU HƠN - Batch insert thay vì insert từng cái
     @Transactional
     public BulkImportResult createBulkProductsOptimized(
             List<CreateProductRequest> requests) {
 
         BulkImportResult result = new BulkImportResult();
 
-        // 1. Load all categories 1 lần
-        Set<Long> categoryIds = requests.stream()
-                .map(CreateProductRequest::getCategoryId)
-                .collect(Collectors.toSet());
-
-        Map<Long, Category> categoryMap = categoryRepository
-                .findAllById(categoryIds)
-                .stream()
-                .collect(Collectors.toMap(Category::getId, c -> c));
+//        Map<Long, Category> categoryMap = categoryRepository
+//                .findAllById(categoryIds)
+//                .stream()
+//                .collect(Collectors.toMap(Category::getId, c -> c));
 
         // 2. Prepare products to save
         List<Product> productsToSave = new ArrayList<>();
@@ -219,35 +213,39 @@ public class ProductService {
             CreateProductRequest req = requests.get(i);
 
             try {
+                Category category = resolveCategoryFromRequest(req);
                 // Validate
-                if (!categoryMap.containsKey(req.getCategoryId())) {
-                    result.addFailure(i, req.getTitle(),
-                            "Category not found");
+                boolean exists = productRepository.findAll().stream()
+                        .anyMatch(p ->
+                                p.getTitle().equalsIgnoreCase(req.getTitle()) &&
+                                        p.getBrand().equalsIgnoreCase(req.getBrand())
+                        );
+
+                if (exists) {
+                    result.addFailure(i, req.getTitle(), "Product already exists");
                     continue;
                 }
 
-                // Build product
-                Product product = buildProductFromRequest(
-                        req, categoryMap.get(req.getCategoryId()));
-                productsToSave.add(product);
+                Product product = buildProductFromRequest(req, category);
+                result.getSuccessProducts().add(product);
 
             } catch (Exception e) {
                 result.addFailure(i, req.getTitle(), e.getMessage());
             }
         }
 
-        // ✅ 3. BATCH INSERT - 1 lần duy nhất
-        List<Product> saved = productRepository.saveAll(productsToSave);
+        // ✅ BATCH INSERT
+        List<Product> saved = productRepository.saveAll(result.getSuccessProducts());
+        result.getSuccessProducts().clear();
+        result.getSuccessProducts().addAll(saved);
 
-        // 4. Create inventories for saved products
+        // Create inventories & images
         for (Product product : saved) {
-            CreateProductRequest req = findRequestForProduct(
-                    requests, product);
+            CreateProductRequest req = findRequestForProduct(requests, product);
             createInventoriesForProduct(product, req.getVariants());
             createImagesForProduct(product, req.getImageUrls());
         }
 
-        result.getSuccessProducts().addAll(saved);
         return result;
     }
 
@@ -367,7 +365,16 @@ public class ProductService {
     public Product createSingleProduct(CreateProductRequest request) {
         log.info("📦 Creating single product: {}", request.getTitle());
 
-        if (productRepository.existsByTitleAndBrand(request.getTitle(), request.getBrand())) {
+        Category category = resolveCategoryFromRequest(request);
+
+        // ✅ 2. CHECK DUPLICATE (case-insensitive)
+        boolean exists = productRepository.findAll().stream()
+                .anyMatch(p ->
+                        p.getTitle().equalsIgnoreCase(request.getTitle()) &&
+                                p.getBrand().equalsIgnoreCase(request.getBrand())
+                );
+
+        if (exists) {
             throw new AppException(
                     "Product with same title and brand already exists",
                     HttpStatus.CONFLICT
@@ -386,11 +393,11 @@ public class ProductService {
         }
 
         // 1. VALIDATE CATEGORY
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new AppException(
-                        "Category not found with id: " + request.getCategoryId(),
-                        HttpStatus.NOT_FOUND
-                ));
+//        Category category = categoryRepository.findById(request.getCategoryId())
+//                .orElseThrow(() -> new AppException(
+//                        "Category not found with id: " + request.getCategoryId(),
+//                        HttpStatus.NOT_FOUND
+//                ));
 
         // 2. VALIDATE VARIANTS
         if (request.getVariants() == null || request.getVariants().isEmpty()) {
@@ -684,5 +691,70 @@ public class ProductService {
         product.setWarningCount(0);
 
         return product;
+    }
+
+    private Category getOrCreateCategoryIgnoreCase(String topLevelName, String secondLevelName) {
+        // ✅ Dùng custom query thay vì stream
+        Category parentCategory = categoryRepository
+                .findByNameAndLevelIgnoreCase(topLevelName, 1)
+                .orElseGet(() -> {
+                    Category newParent = new Category();
+                    newParent.setName(capitalize(topLevelName));
+                    newParent.setLevel(1);
+                    newParent.setIsParent(true);
+                    return categoryRepository.save(newParent);
+                });
+
+        Category childCategory = categoryRepository
+                .findByNameAndLevelIgnoreCase(secondLevelName, 2)
+                .filter(c -> c.getParentCategory() != null &&
+                        c.getParentCategory().getId().equals(parentCategory.getId()))
+                .orElseGet(() -> {
+                    Category newChild = new Category();
+                    newChild.setName(capitalize(secondLevelName));
+                    newChild.setLevel(2);
+                    newChild.setIsParent(false);
+                    newChild.setParentCategory(parentCategory);
+                    return categoryRepository.save(newChild);
+                });
+
+        return childCategory;
+    }
+
+    /**
+     * ✅ CAPITALIZE tên category (Google Pixel → Google Pixel)
+     */
+    private String capitalize(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return Arrays.stream(str.trim().split("\\s+"))
+                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
+    }
+
+    private Category resolveCategoryFromRequest(CreateProductRequest request) {
+        // Option 1: Có categoryId → dùng trực tiếp
+        if (request.getCategoryId() != null) {
+            return categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new AppException(
+                            "Category not found with id: " + request.getCategoryId(),
+                            HttpStatus.NOT_FOUND
+                    ));
+        }
+
+        // Option 2: Có category names → tìm/tạo
+        if (request.getTopLevelCategory() != null &&
+                request.getSecondLevelCategory() != null) {
+
+            return getOrCreateCategoryIgnoreCase(
+                    request.getTopLevelCategory().trim(),
+                    request.getSecondLevelCategory().trim()
+            );
+        }
+
+        // Không có thông tin category
+        throw new AppException(
+                "Either categoryId or (topLevelCategory + secondLevelCategory) must be provided",
+                HttpStatus.BAD_REQUEST
+        );
     }
 }

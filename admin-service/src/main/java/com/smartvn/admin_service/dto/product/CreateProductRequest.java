@@ -8,62 +8,94 @@ import java.util.List;
 
 @Data
 public class CreateProductRequest {
+
+    // === BASIC INFO ===
     @NotBlank(message = "Title is required")
-    @Size(max = 100)
+    @Size(max = 100, message = "Title must be less than 100 characters")
     private String title;
 
     @NotBlank(message = "Brand is required")
-    @Size(max = 50)
+    @Size(max = 50, message = "Brand must be less than 50 characters")
     private String brand;
 
-    @Size(max = 500)
+    @Size(max = 500, message = "Description must be less than 500 characters")
     private String description;
 
-    @NotNull(message = "Category is required")
     private Long categoryId;
 
-    // Specifications
-    @Size(max = 50) private String color;
-    @Size(max = 50) private String weight;
-    @Size(max = 100) private String dimension;
-    @Size(max = 50) private String batteryType;
-    @Size(max = 50) private String batteryCapacity;
-    @Size(max = 50) private String ramCapacity;
-    @Size(max = 50) private String romCapacity;
-    @Size(max = 50) private String screenSize;
-    @Size(max = 100) private String connectionPort;
+    private String topLevelCategory;
+    private String secondLevelCategory;
+
+    // === SPECIFICATIONS ===
+    @Size(max = 50)
+    private String color;
+
+    @Size(max = 50)
+    private String weight;
+
+    @Size(max = 100)
+    private String dimension;
+
+    @Size(max = 50)
+    private String batteryType;
+
+    @Size(max = 50)
+    private String batteryCapacity;
+
+    @Size(max = 50)
+    private String ramCapacity;
+
+    @Size(max = 50)
+    private String romCapacity;
+
+    @Size(max = 50)
+    private String screenSize;
+
+    @Size(max = 100)
+    private String connectionPort;
+
     private String detailedReview;
     private String powerfulPerformance;
 
-    // Variants (REQUIRED)
+    // === VARIANTS (REQUIRED) ===
     @NotEmpty(message = "Product must have at least one variant")
     @Valid
     private List<CreateInventoryDTO> variants;
 
-    // Image URLs (Optional)
+    // === IMAGE URLS (Optional) ===
     @Valid
     private List<ImageUrlDTO> imageUrls;
 
     @Data
     public static class CreateInventoryDTO {
-        @NotBlank @Size(max = 50)
+        @NotBlank(message = "Size is required")
+        @Size(max = 50)
         private String size;
 
-        @NotNull @Min(0)
+        @NotNull(message = "Quantity is required")
+        @Min(value = 0, message = "Quantity must be >= 0")
         private Integer quantity;
 
-        @NotNull @DecimalMin("0.0")
+        @NotNull(message = "Price is required")
+        @DecimalMin(value = "0.0", inclusive = false, message = "Price must be > 0")
         private BigDecimal price;
 
-        @Min(0) @Max(100)
+        @Min(value = 0, message = "Discount must be >= 0")
+        @Max(value = 100, message = "Discount must be <= 100")
         private Integer discountPercent = 0;
     }
 
     @Data
     public static class ImageUrlDTO {
-        @NotBlank
+        @NotBlank(message = "Image URL is required")
         private String downloadUrl;
+
         private String fileName;
         private String fileType;
+    }
+
+    public boolean hasCategoryInfo() {
+        return categoryId != null ||
+                (topLevelCategory != null && secondLevelCategory != null);
     }
 }

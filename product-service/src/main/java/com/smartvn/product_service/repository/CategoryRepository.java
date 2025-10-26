@@ -2,6 +2,8 @@ package com.smartvn.product_service.repository;
 
 import com.smartvn.product_service.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -32,4 +34,13 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      * @return List các Category cấp 1.
      */
     List<Category> findByLevel(Integer level);
+
+    @Query("SELECT c FROM Category c WHERE LOWER(c.name) = LOWER(:name)")
+    Optional<Category> findByNameIgnoreCase(@Param("name") String name);
+
+    @Query("SELECT c FROM Category c WHERE LOWER(c.name) = LOWER(:name) AND c.level = :level")
+    Optional<Category> findByNameAndLevelIgnoreCase(
+            @Param("name") String name,
+            @Param("level") int level
+    );
 }

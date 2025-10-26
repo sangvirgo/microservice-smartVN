@@ -22,8 +22,10 @@ public class CreateProductRequest {
     @Size(max = 500, message = "Description must be less than 500 characters")
     private String description;
 
-    @NotNull(message = "Category is required")
     private Long categoryId;
+
+    private String topLevelCategory;
+    private String secondLevelCategory;
 
     // === SPECIFICATIONS ===
     @Size(max = 50)
@@ -91,5 +93,10 @@ public class CreateProductRequest {
 
         private String fileName;
         private String fileType;
+    }
+
+    public boolean hasCategoryInfo() {
+        return categoryId != null ||
+                (topLevelCategory != null && secondLevelCategory != null);
     }
 }
