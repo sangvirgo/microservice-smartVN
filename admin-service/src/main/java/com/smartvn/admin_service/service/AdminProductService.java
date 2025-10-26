@@ -55,10 +55,10 @@ public class AdminProductService extends BaseAdminService {
     /**
      * ✅ LẤY CHI TIẾT PRODUCT BY ID
      */
-    public ProductAdminViewDTO getProductById(Long productId) {
+    public ProductDetailForEditDTO getProductById(Long productId) {
         log.info("📦 Getting product detail: {}", productId);
 
-        ResponseEntity<ApiResponse<ProductAdminViewDTO>> response =
+        ResponseEntity<ApiResponse<ProductDetailForEditDTO>> response =
                 productServiceClient.getProductDetailAdmin(productId);
 
         return handleResponse(response, "Failed to get product detail");

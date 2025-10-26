@@ -71,7 +71,7 @@ public class AdminProductController {
     public ResponseEntity<ApiResponse<?>> getProductById(
             @PathVariable Long productId) {
 
-        ProductAdminViewDTO product = productService.getProductById(productId);
+        ProductDetailForEditDTO product = productService.getProductById(productId);
         return ResponseEntity.ok(ApiResponse.success(product, "Product retrieved"));
     }
 

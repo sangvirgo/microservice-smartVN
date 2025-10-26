@@ -45,7 +45,7 @@ public interface ProductServiceClient {
      * @return ProductAdminViewDTO
      */
     @GetMapping("${api.prefix}/internal/products/admin/{productId}") // Hoặc dùng endpoint public nếu đủ thông tin
-    ResponseEntity<ApiResponse<ProductAdminViewDTO>> getProductDetailAdmin(@PathVariable("productId") Long productId);
+    ResponseEntity<ApiResponse<ProductDetailForEditDTO>> getProductDetailAdmin(@PathVariable("productId") Long productId);
 
     /**
      * Kích hoạt/Vô hiệu hóa sản phẩm.

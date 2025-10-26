@@ -1,10 +1,7 @@
 package com.smartvn.product_service.controller;
 
 import com.smartvn.product_service.dto.InventoryDTO;
-import com.smartvn.product_service.dto.admin.CreateProductRequest;
-import com.smartvn.product_service.dto.admin.ProductAdminViewDTO;
-import com.smartvn.product_service.dto.admin.UpdateInventoryRequest;
-import com.smartvn.product_service.dto.admin.UpdateProductRequest;
+import com.smartvn.product_service.dto.admin.*;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Inventory;
 import com.smartvn.product_service.model.Product;
@@ -106,12 +103,73 @@ public class AdminProductController {
                 .build());
     }
 
-    @GetMapping("/{productId}")
-    public ResponseEntity<ApiResponse<ProductAdminViewDTO>> getProductDetail(
-            @PathVariable Long productId) {
-        Product product = productService.findById(productId);
-        ProductAdminViewDTO dto = convertToAdminDTO(product);
+    /**
+     * ✅ ENDPOINT MỚI - LẤY FULL DATA CHO EDIT
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ProductDetailForEditDTO>> getProductForEdit(
+            @PathVariable Long id) {
+
+        Product product = productService.findById(id);
+        ProductDetailForEditDTO dto = convertToEditDTO(product);
+
         return ResponseEntity.ok(ApiResponse.success(dto, "Product retrieved"));
+    }
+
+    // ✅ Helper method
+    private ProductDetailForEditDTO convertToEditDTO(Product product) {
+        ProductDetailForEditDTO dto = new ProductDetailForEditDTO();
+
+        dto.setId(product.getId());
+        dto.setTitle(product.getTitle());
+        dto.setBrand(product.getBrand());
+        dto.setDescription(product.getDescription());
+
+        // Specs
+        dto.setColor(product.getColor());
+        dto.setWeight(product.getWeight());
+        dto.setDimension(product.getDimension());
+        dto.setBatteryType(product.getBatteryType());
+        dto.setBatteryCapacity(product.getBatteryCapacity());
+        dto.setRamCapacity(product.getRamCapacity());
+        dto.setRomCapacity(product.getRomCapacity());
+        dto.setScreenSize(product.getScreenSize());
+        dto.setConnectionPort(product.getConnectionPort());
+        dto.setDetailedReview(product.getDetailedReview());
+        dto.setPowerfulPerformance(product.getPowerfulPerformance());
+
+        // Category
+        if (product.getCategory() != null) {
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+        }
+
+        // Status
+        dto.setActive(product.getIsActive());
+        dto.setQuantitySold(product.getQuantitySold());
+        dto.setAverageRating(product.getAverageRating());
+        dto.setNumRatings(product.getNumRatings());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
+
+        // Inventories
+        dto.setInventories(product.getInventories().stream()
+                .map(InventoryDTO::new)
+                .collect(Collectors.toList()));
+
+        // Images
+        dto.setImages(product.getImages().stream()
+                .map(img -> {
+                    ImageDTO imgDto = new ImageDTO();
+                    imgDto.setId(img.getId());
+                    imgDto.setDownloadUrl(img.getDownloadUrl());
+                    imgDto.setFileName(img.getFileName());
+                    imgDto.setFileType(img.getFileType());
+                    return imgDto;
+                })
+                .collect(Collectors.toList()));
+
+        return dto;
     }
 
     /**

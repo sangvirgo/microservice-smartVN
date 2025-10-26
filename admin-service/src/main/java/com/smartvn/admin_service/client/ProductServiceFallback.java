@@ -22,7 +22,7 @@ public class ProductServiceFallback implements ProductServiceClient {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<ProductAdminViewDTO>> getProductDetailAdmin(Long productId) {
+    public ResponseEntity<ApiResponse<ProductDetailForEditDTO>> getProductDetailAdmin(Long productId) {
         log.error("Product Service unavailable. Returning empty result.");
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
