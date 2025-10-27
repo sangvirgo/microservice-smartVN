@@ -53,7 +53,7 @@ public interface ProductServiceClient {
      * @param productId ID sản phẩm
      * @return Phản hồi không có nội dung
      */
-    @PutMapping("${api.prefix}/internal/products/{productId}/toggle-active")
+    @PutMapping("${api.prefix}/internal/products/admin/{productId}/toggle-active")
     ResponseEntity<ApiResponse<Void>> toggleProductActive(@PathVariable("productId") Long productId);
 
     /**
@@ -62,7 +62,7 @@ public interface ProductServiceClient {
      * @param productId ID sản phẩm
      * @return Phản hồi không có nội dung
      */
-    @DeleteMapping("${api.prefix}/internal/products/{productId}")
+    @DeleteMapping("${api.prefix}/internal/products/admin/{productId}")
     ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable("productId") Long productId);
 
     /**
@@ -73,7 +73,7 @@ public interface ProductServiceClient {
      * @param request Dữ liệu cập nhật (số lượng, giá,...)
      * @return InventoryDTO đã được cập nhật
      */
-    @PutMapping("${api.prefix}/internal/products/{productId}/inventory/{inventoryId}")
+    @PutMapping("${api.prefix}/internal/products/admin/{productId}/inventory/{inventoryId}")
     ResponseEntity<ApiResponse<InventoryDTO>> updateInventory(
             @PathVariable("productId") Long productId,
             @PathVariable("inventoryId") Long inventoryId,
@@ -86,7 +86,7 @@ public interface ProductServiceClient {
      * @param request Dữ liệu inventory mới (size, số lượng, giá,...)
      * @return InventoryDTO mới được tạo
      */
-    @PostMapping("${api.prefix}/internal/products/{productId}/inventory")
+    @PostMapping("${api.prefix}/internal/products/admin/{productId}/inventory")
     ResponseEntity<ApiResponse<InventoryDTO>> addInventory(
             @PathVariable("productId") Long productId,
             @RequestBody UpdateInventoryRequest request);
