@@ -37,7 +37,7 @@ public class InternalReviewController {
     /**
      * ✅ LẤY TẤT CẢ REVIEWS CHO ADMIN
      */
-    @GetMapping("/all") // Đúng với client call
+    @GetMapping("/all")
     public ResponseEntity<?> getAllReviewsAdmin(
             @RequestParam("page") int page,
             @RequestParam("size") int size,
@@ -57,7 +57,14 @@ public class InternalReviewController {
 
         Page<ReviewAdminDTO> dtos = reviews.map(this::convertToAdminDTO);
 
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Reviews retrieved"));
+        // ✅ DÙNG CÁI NÀY:
+        return ResponseEntity.ok(
+                ApiResponse.<Page<ReviewAdminDTO>>builder()
+                        .data(dtos)  // Giữ nguyên Page object
+                        .message("Reviews retrieved")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
     }
 
     private ReviewAdminDTO convertToAdminDTO(Review review) {

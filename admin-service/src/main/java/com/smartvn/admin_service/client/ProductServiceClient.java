@@ -104,12 +104,12 @@ public interface ProductServiceClient {
      * @return Trang kết quả ReviewDTO
      */
     @GetMapping("${api.prefix}/internal/reviews/admin/all")
-    ResponseEntity<ApiResponse<Page<ReviewDTO>>> getAllReviewsAdmin( // Sử dụng generic hoặc tạo ReviewAdminDTO
-                                                                     @RequestParam("page") int page,
-                                                                     @RequestParam("size") int size,
-                                                                     @RequestParam(value = "status", required = false) String status,
-                                                                     @RequestParam(value = "productId", required = false) Long productId,
-                                                                     @RequestParam(value = "userId", required = false) Long userId);
+    ResponseEntity<ApiResponse<Page<ReviewDTO>>> getAllReviewsAdmin(
+            @RequestParam("page") int page,
+            @RequestParam("size") int size,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "productId", required = false) Long productId,
+            @RequestParam(value = "userId", required = false) Long userId);
     /**
      * Xóa một review.
      * Endpoint này cần được tạo trong Product Service.
@@ -120,7 +120,7 @@ public interface ProductServiceClient {
     ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable("reviewId") Long reviewId);
 
 
-    @GetMapping("${api.prefix}/internal/products/stats")
+    @GetMapping("${api.prefix}/internal/products/stats") // ✅ FIX: Sửa path
     ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats();
 
     /**

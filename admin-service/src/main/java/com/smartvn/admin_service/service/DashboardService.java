@@ -89,6 +89,10 @@ public class DashboardService extends BaseAdminService {
                 stats.setPendingOrders(orderStats.getPendingOrders());
                 stats.setTotalRevenue(orderStats.getTotalRevenue());
                 stats.setRevenueThisMonth(orderStats.getRevenueThisMonth());
+                stats.setShippedOrders(orderStats.getShippedOrders());
+                stats.setCancelledOrders(orderStats.getCancelledOrders());
+                stats.setConfirmedOrders(orderStats.getConfirmedOrders());
+                stats.setDeliveredOrders(orderStats.getDeliveredOrders());
             } catch (Exception e) {
                 log.error("Error fetching order stats", e);
                 setDefaultOrderStats(stats);
@@ -127,6 +131,12 @@ public class DashboardService extends BaseAdminService {
         stats.setPendingOrders(0L);
         stats.setTotalRevenue(0.0);
         stats.setRevenueThisMonth(0.0);
+        stats.setActiveProducts(0L);
+        stats.setConfirmedOrders(0L);
+        stats.setCancelledOrders(0L);
+        stats.setTotalUsers(0L);
+        stats.setDeliveredOrders(0L);
+        stats.setShippedOrders(0L);
     }
 
 
