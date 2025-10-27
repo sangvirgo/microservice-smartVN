@@ -7,12 +7,13 @@ import java.time.LocalDateTime;
 @Data
 public class ReviewDTO {
     private Long id;
-    private String reviewContent;
-    private Long productId;
     private Long userId;
-    private String userFirstName;
-    private String userLastName;
-    private String userAvatar; // Thêm field này
-    private LocalDateTime createdAt;
+    private String userEmail; // Lấy từ UserService
+    private String userName;
+    private Long productId;
+    private String productTitle; // Lấy từ Product
     private Integer rating;
+    private String reviewContent;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -3,6 +3,7 @@ package com.smartvn.product_service.controller;
 import com.smartvn.product_service.client.UserServiceClient;
 import com.smartvn.product_service.dto.UserInfoDTO;
 import com.smartvn.product_service.dto.admin.ReviewAdminDTO;
+import com.smartvn.product_service.dto.admin.UserDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.exceptions.AppException;
 import com.smartvn.product_service.model.Review;
@@ -31,7 +32,13 @@ public class InternalReviewController {
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<?> deleteReview(@PathVariable Long reviewId) {
         reviewService.deleteReviewByAdmin(reviewId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Review deleted"));
+        return ResponseEntity.ok(
+                ApiResponse.<Page<ReviewAdminDTO>>builder()
+                        .data(null)  // Giữ nguyên Page object
+                        .message("Reviews deleted successfully")
+                        .status(HttpStatus.OK.value())
+                        .build()
+        );
     }
 
     /**
@@ -78,11 +85,11 @@ public class InternalReviewController {
         dto.setCreatedAt(review.getCreatedAt());
         dto.setUpdatedAt(review.getUpdatedAt());
 
-        // ✅ Lấy thông tin user từ UserServiceClient (nếu cần)
+        // ✅ FIX: Gọi getUserById() thay vì getUserInfo()
         try {
-            UserInfoDTO userInfo = userServiceClient.getUserInfo(review.getUserId());
+            UserDTO userInfo = userServiceClient.getUserById(review.getUserId());
             dto.setUserEmail(userInfo.getEmail());
-            dto.setUserName(userInfo.getFullName());
+            dto.setUserName(userInfo.getFirstName() + " " + userInfo.getLastName());
         } catch (Exception e) {
             log.warn("Failed to fetch user info for review {}", review.getId());
             dto.setUserEmail("Unknown");
