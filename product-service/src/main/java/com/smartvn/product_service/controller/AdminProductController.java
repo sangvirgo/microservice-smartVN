@@ -3,8 +3,10 @@ package com.smartvn.product_service.controller;
 import com.smartvn.product_service.dto.InventoryDTO;
 import com.smartvn.product_service.dto.admin.*;
 import com.smartvn.product_service.dto.response.ApiResponse;
+import com.smartvn.product_service.model.Image;
 import com.smartvn.product_service.model.Inventory;
 import com.smartvn.product_service.model.Product;
+import com.smartvn.product_service.service.ImageService;
 import com.smartvn.product_service.service.InventoryService;
 import com.smartvn.product_service.service.ProductService;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +33,7 @@ public class AdminProductController {
 
     private final ProductService productService;
     private final InventoryService inventoryService;
+    private final ImageService imageService;
 
     /**
      * ✅ TẠO SẢN PHẨM ĐƠN LẺ
@@ -292,6 +296,32 @@ public class AdminProductController {
                 .message("Inventory deleted")
                 .status(HttpStatus.OK.value())
                 .build());
+    }
+
+    @PostMapping("/{productId}/images")
+    public ResponseEntity<ApiResponse<ImageDTO>> uploadImageForProduct(
+            @PathVariable Long productId,
+            @RequestPart("file") MultipartFile file) {
+
+        Image image = imageService.uploadImageForProduct(productId, file);
+
+        ImageDTO dto = new ImageDTO();
+        dto.setId(image.getId());
+        dto.setFileName(image.getFileName());
+        dto.setFileType(image.getFileType());
+        dto.setDownloadUrl(image.getDownloadUrl());
+        dto.setProductId(productId);
+        dto.setCreatedAt(image.getCreatedAt());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(dto, "Image uploaded"));
+    }
+
+    @DeleteMapping("/images/{imageId}")
+    public ResponseEntity<?> deleteImageById(@PathVariable Long imageId) {
+        imageService.deleteImage(imageId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Image deleted"));
     }
 
 

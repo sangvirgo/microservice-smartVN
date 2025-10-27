@@ -38,13 +38,21 @@ public class AdminProductController {
     @PutMapping("/{id}/toggle-active")
     public ResponseEntity<ApiResponse<?>> toggleActive(@PathVariable Long id) {
         productService.toggleActive(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Status updated"));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Changed status successfully")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Product deleted"));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Product deleted")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
     @PostMapping("/{productId}/inventory")
@@ -138,8 +146,13 @@ public class AdminProductController {
      * ✅ XÓA ẢNH
      */
     @DeleteMapping("/images/{imageId}")
-    public ResponseEntity<ApiResponse<?>> deleteImage(@PathVariable Long imageId) {
+    public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long imageId) {
         productService.deleteImage(imageId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Image deleted"));
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Image deleted")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 }

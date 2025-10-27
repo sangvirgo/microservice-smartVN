@@ -116,7 +116,7 @@ public interface ProductServiceClient {
      * @param reviewId ID của review
      * @return Phản hồi không có nội dung
      */
-    @DeleteMapping("${api.prefix}/internal/reviews/{reviewId}")
+    @DeleteMapping("${api.prefix}/internal/reviews/admin/{reviewId}")
     ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable("reviewId") Long reviewId);
 
 

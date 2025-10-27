@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("${api.prefix}/internal/admin/review")
+@RequestMapping("${api.prefix}/internal/reviews/admin")
 public class InternalReviewController {
     private final ReviewService reviewService;
     private final UserServiceClient userServiceClient;
@@ -28,7 +28,7 @@ public class InternalReviewController {
     /**
      * ✅ XÓA REVIEW
      */
-    @DeleteMapping("/reviews/{reviewId}")
+    @DeleteMapping("/{reviewId}")
     public ResponseEntity<?> deleteReview(@PathVariable Long reviewId) {
         reviewService.deleteReviewByAdmin(reviewId);
         return ResponseEntity.ok(ApiResponse.success(null, "Review deleted"));
@@ -37,7 +37,7 @@ public class InternalReviewController {
     /**
      * ✅ LẤY TẤT CẢ REVIEWS CHO ADMIN
      */
-    @GetMapping("/reviews/admin/all") // Đúng với client call
+    @GetMapping("/all") // Đúng với client call
     public ResponseEntity<?> getAllReviewsAdmin(
             @RequestParam("page") int page,
             @RequestParam("size") int size,
