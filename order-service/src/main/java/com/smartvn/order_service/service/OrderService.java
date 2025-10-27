@@ -283,10 +283,8 @@ public class OrderService {
     public Order updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = findOrderById(orderId);
 
-        // ✅ Validate transition hợp lệ
         validateStatusTransition(order.getOrderStatus(), newStatus);
 
-        // ✅ Xử lý logic đặc biệt khi DELIVERED
         if (newStatus == OrderStatus.DELIVERED) {
             order.setDeliveryDate(LocalDateTime.now());
             order.setPaymentStatus(PaymentStatus.COMPLETED);

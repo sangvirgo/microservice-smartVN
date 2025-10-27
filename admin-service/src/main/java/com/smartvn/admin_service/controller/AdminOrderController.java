@@ -50,7 +50,7 @@ public class AdminOrderController {
         }
 
         try {
-            OrderStatus orderStatus = OrderStatus.valueOf(status);
+            OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
             OrderAdminViewDTO order = adminOrderService.updateStatus(orderId, orderStatus);
             return ResponseEntity.ok(ApiResponse.success(order, "Changed order status"));
         } catch (IllegalArgumentException e) {
