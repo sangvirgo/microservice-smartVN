@@ -156,16 +156,37 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new AppException("Review not found", HttpStatus.NOT_FOUND));
 
-        reviewRepository.delete(review);
+        // ✅ LƯU THÔNG TIN TRƯỚC KHI XÓA
+        Long userId = review.getUserId();
+        Long productId = review.getProduct().getId();
 
-        // increase the count of user
-        UserDTO userDTO = userServiceClient.getUserById(review.getUserId());
-        userDTO.setWarningCount(userDTO.getWarningCount() + 1);
+        // ✅ 1. TĂNG WARNING COUNT TRƯỚC
+        try {
+            UserDTO userDTO = userServiceClient.getUserById(userId);
 
-        if(userDTO.getWarningCount() >=3) {
-            userServiceClient.banUser(review.getUserId());
+            // Call user service để tăng warning count
+            userServiceClient.warnUser(userId);
+
+            // Check nếu đủ 3 warning thì ban
+            if(userDTO.getWarningCount() + 1 >= 3) {
+                userServiceClient.banUser(userId);
+                log.warn("User {} has been banned after 3 warnings", userId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to update user warning count for userId: {}", userId, e);
+            // ⚠️ Tiếp tục xóa review dù user service lỗi
         }
 
-        updateProductRating(review.getProduct().getId());
+        // ✅ 2. XÓA REVIEW
+        reviewRepository.delete(review);
+        log.info("Deleted review {} by admin", reviewId);
+
+        // ✅ 3. CẬP NHẬT RATING
+        try {
+            updateProductRating(productId);
+        } catch (Exception e) {
+            log.error("Failed to update product rating after review deletion", e);
+            // Không throw exception để transaction vẫn commit
+        }
     }
 }

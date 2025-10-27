@@ -44,4 +44,13 @@ public class UserServiceFallback implements UserServiceClient {
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));
     }
+
+
+    @Override
+    public ResponseEntity<ApiResponse<Void>> warnUser(Long userId) {
+        log.error("User Service unavailable. Cannot warn user {}", userId);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error("User service đang bảo trì. Vui lòng thử lại sau."));
+    }
 }

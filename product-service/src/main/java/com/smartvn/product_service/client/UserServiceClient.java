@@ -27,4 +27,8 @@ public interface UserServiceClient {
 
     @PutMapping("${api.prefix}/internal/users/{userId}/ban")
     ResponseEntity<ApiResponse<Void>> banUser(@PathVariable("userId") Long userId);
+
+
+    @PutMapping("${api.prefix}/internal/users/{userId}/warn")
+    ResponseEntity<ApiResponse<Void>> warnUser(@PathVariable("userId") Long userId);
 }

@@ -5,8 +5,12 @@ import com.smartvn.admin_service.dto.response.ApiResponse;
 import com.smartvn.admin_service.service.AdminReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/admin/reviews")
@@ -27,8 +31,10 @@ public class AdminReviewController {
     }
 
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<ApiResponse<?>> deleteReview(@PathVariable Long reviewId) {
+    public ResponseEntity<?> deleteReview(@PathVariable Long reviewId) {
         reviewService.deleteReview(reviewId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Review deleted successfully"));
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully deleted review");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
