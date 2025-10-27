@@ -287,11 +287,19 @@ public class OrderService {
 
         if (newStatus == OrderStatus.DELIVERED) {
             order.setDeliveryDate(LocalDateTime.now());
-            order.setPaymentStatus(PaymentStatus.COMPLETED);
+            if (order.getPaymentStatus() == PaymentStatus.PENDING) {
+                order.setPaymentStatus(PaymentStatus.COMPLETED);
+            }
 
-            // Tăng quantity_sold cho từng product
             for (OrderItem item : order.getOrderItems()) {
-                productServiceClient.increaseQuantitySold(new InventoryCheckRequest(item.getProductId(), item.getQuantity()));
+                try {
+                    InventoryCheckRequest increaseSoldRequest = new InventoryCheckRequest(item.getProductId(), item.getQuantity());
+                    productServiceClient.increaseQuantitySold(increaseSoldRequest);
+                    log.info("Increased quantity sold for product {} by {}", item.getProductId(), item.getQuantity());
+                } catch (Exception e) {
+                    log.error("Failed to increase quantity sold for product {} (Order {}). Error: {}",
+                            item.getProductId(), orderId, e.getMessage());
+                }
             }
         }
 
@@ -300,24 +308,36 @@ public class OrderService {
     }
 
     private void validateStatusTransition(OrderStatus current, OrderStatus next) {
-        // PENDING → CONFIRMED → SHIPPED → DELIVERED
-        // CANCELLED có thể từ PENDING hoặc CONFIRMED
+        log.debug("Validating transition from {} to {}", current, next);
 
         if (current == OrderStatus.DELIVERED || current == OrderStatus.CANCELLED) {
-            throw new AppException("Cannot update completed order", HttpStatus.BAD_REQUEST);
+            throw new AppException("Cannot update status for a completed or cancelled order", HttpStatus.BAD_REQUEST);
         }
 
-        if (current == OrderStatus.SHIPPED || next == OrderStatus.CONFIRMED) {
-            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
+        switch (current) {
+            case PENDING:
+                if (next != OrderStatus.CONFIRMED && next != OrderStatus.CANCELLED) {
+                    throw new AppException("Cannot transition from PENDING to " + next, HttpStatus.BAD_REQUEST);
+                }
+                break;
+            case CONFIRMED:
+                if (next != OrderStatus.SHIPPED && next != OrderStatus.CANCELLED) {
+                    throw new AppException("Cannot transition from CONFIRMED to " + next, HttpStatus.BAD_REQUEST);
+                }
+                break;
+            case SHIPPED:
+                // Từ SHIPPED chỉ có thể sang DELIVERED
+                if (next != OrderStatus.DELIVERED) {
+                    // ✅ Cung cấp thông báo lỗi cụ thể hơn khi hủy đơn đã giao
+                    if (next == OrderStatus.CANCELLED) {
+                        throw new AppException("Không thể hủy đơn hàng đã được giao đi", HttpStatus.BAD_REQUEST); // Specific message
+                    } else {
+                        throw new AppException("Cannot transition from SHIPPED to " + next, HttpStatus.BAD_REQUEST);
+                    }
+                }
+                break;
         }
-
-        if (current == OrderStatus.CONFIRMED || next == OrderStatus.PENDING) {
-            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
-        }
-
-        if (current == OrderStatus.SHIPPED || next == OrderStatus.CANCELLED) {
-            throw new AppException("Cannot update this status order", HttpStatus.BAD_REQUEST);
-        }
+        log.debug("Transition from {} to {} is valid", current, next);
     }
 
     public RevenueChartDTO calculateRevenueChart(LocalDate start, LocalDate end) {
