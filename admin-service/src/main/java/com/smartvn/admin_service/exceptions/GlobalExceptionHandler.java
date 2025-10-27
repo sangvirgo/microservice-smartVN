@@ -85,29 +85,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleHandlerMethodValidationException(
             HandlerMethodValidationException ex) {
 
-        Map<String, Object> errors = new HashMap<>();
+        Map<String, String> errors = new HashMap<>();
 
-        // ✅ LOG TOÀN BỘ EXCEPTION
-        log.error("❌ FULL VALIDATION ERROR: ", ex);
-
-        // ✅ Extract validation results
         ex.getAllValidationResults().forEach(result -> {
             String paramName = result.getMethodParameter().getParameterName();
-            log.error("  → Parameter: {}", paramName);
 
             result.getResolvableErrors().forEach(error -> {
                 String msg = error.getDefaultMessage();
-                log.error("    ↳ Error: {}", msg);
-                errors.put(paramName != null ? paramName : "unknown", msg);
+                errors.put(paramName != null ? paramName : "field", msg);
             });
         });
 
-        // ✅ THÊM LOG RAW MESSAGE
-        log.error("Raw message: {}", ex.getMessage());
-        log.error("Detailed message: {}", ex.getDetailMessageCode());
+        log.error("Validation failed: {}", errors);
 
         return ResponseEntity.badRequest()
-                .body(ApiResponse.error("Validation failed: " + errors,
-                        HttpStatus.BAD_REQUEST, "VALIDATION_ERROR"));
+                .body(ApiResponse.error(
+                        "Validation failed: " + errors,
+                        HttpStatus.BAD_REQUEST,
+                        "VALIDATION_ERROR"
+                ));
     }
 }

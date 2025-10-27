@@ -100,7 +100,7 @@ public class InternalProductController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/stats")
+    @GetMapping("/product/stats")
     public ResponseEntity<ApiResponse<ProductStatsDTO>> getProductStats() {
         ProductStatsDTO stats = new ProductStatsDTO();
         stats.setTotalProducts(productRepository.count());
