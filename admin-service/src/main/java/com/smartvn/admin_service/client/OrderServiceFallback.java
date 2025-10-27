@@ -4,6 +4,7 @@ import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.OrderStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,7 @@ public class OrderServiceFallback implements OrderServiceClient{
     }
 
     @Override
-    public ResponseEntity<ApiResponse<OrderAdminViewDTO>> updateOrderStatus(Long orderId, String newStatus) {
+    public ResponseEntity<ApiResponse<OrderAdminViewDTO>> updateOrderStatus(Long orderId, OrderStatus newStatus) {
         log.error("Order Service unavailable. Returning empty result.");
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)

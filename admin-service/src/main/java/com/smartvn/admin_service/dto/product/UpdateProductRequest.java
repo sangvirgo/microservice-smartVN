@@ -14,8 +14,6 @@ public class UpdateProductRequest {
     @Size(max = 500)
     private String description;
 
-    private Long categoryId;
-
     @Size(max = 50) private String color;
     @Size(max = 50) private String weight;
     @Size(max = 100) private String dimension;

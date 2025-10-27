@@ -3,6 +3,7 @@ package com.smartvn.admin_service.controller;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.OrderStatus;
 import com.smartvn.admin_service.service.AdminOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/admin/orders")
@@ -38,9 +40,24 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<?>> updateStatusOrder(@PathVariable("orderId") Long orderId, @RequestParam String status) {
-        OrderAdminViewDTO order = adminOrderService.updateStatus(orderId, status);
-        return ResponseEntity.ok(ApiResponse.success(order, "Changed order status"));
+    public ResponseEntity<ApiResponse<?>> updateStatusOrder(@PathVariable("orderId") Long orderId, @RequestBody Map<String, String> request) {
+
+        String status = request.get("status");
+
+        if(status ==null || status.trim().isEmpty() ) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("New status is required"));
+        }
+
+        try {
+            OrderStatus orderStatus = OrderStatus.valueOf(status);
+            OrderAdminViewDTO order = adminOrderService.updateStatus(orderId, orderStatus);
+            return ResponseEntity.ok(ApiResponse.success(order, "Changed order status"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid status. Allowed values: PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED"));
+        }
+
     }
 
     @GetMapping("/stats")

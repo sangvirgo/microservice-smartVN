@@ -131,9 +131,9 @@ public class InternalOrderController {
     @PutMapping("/{orderId}/status")
     public ResponseEntity<ApiResponse<OrderAdminViewDTO>> updateOrderStatus(
             @PathVariable Long orderId,
-            @RequestParam("status") String newStatus) {
+            @RequestParam("status") OrderStatus newStatus) {
 
-        Order updated = orderService.updateOrderStatus(orderId, OrderStatus.valueOf(newStatus));
+        Order updated = orderService.updateOrderStatus(orderId, newStatus);
         OrderAdminViewDTO dto = convertToAdminDTO(updated);
 
         return ResponseEntity.ok(ApiResponse.success(dto, "Order status updated", null));

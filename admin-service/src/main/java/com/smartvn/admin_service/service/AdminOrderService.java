@@ -4,6 +4,7 @@ import com.smartvn.admin_service.client.OrderServiceClient;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO;
 import com.smartvn.admin_service.dto.order.OrderStatsDTO;
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.OrderStatus;
 import com.smartvn.admin_service.exceptions.BaseAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,7 @@ public class AdminOrderService extends BaseAdminService {
         return handleResponse(response, "Failed to get order detail");
     }
 
-    public OrderAdminViewDTO updateStatus(Long orderId, String status) {
+    public OrderAdminViewDTO updateStatus(Long orderId, OrderStatus status) {
         ResponseEntity<ApiResponse<OrderAdminViewDTO>> response =
                 orderServiceClient.updateOrderStatus(orderId, status);
         return handleResponse(response, "Failed to update order status");

@@ -537,16 +537,6 @@ public class ProductService {
             product.setDescription(request.getDescription());
         }
 
-        // Update category
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new AppException(
-                            "Category not found",
-                            HttpStatus.NOT_FOUND
-                    ));
-            product.setCategory(category);
-        }
-
         // Update specifications
         if (request.getColor() != null) product.setColor(request.getColor());
         if (request.getWeight() != null) product.setWeight(request.getWeight());

@@ -5,6 +5,7 @@ import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.order.OrderStatsDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.response.ApiResponse;
+import com.smartvn.admin_service.enums.OrderStatus;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -60,7 +61,7 @@ public interface OrderServiceClient {
     @PutMapping("${api.prefix}/internal/orders/{orderId}/status")
     ResponseEntity<ApiResponse<OrderAdminViewDTO>> updateOrderStatus(
             @PathVariable("orderId") Long orderId,
-            @RequestParam("status") String newStatus); // Dùng String
+            @RequestParam("status") OrderStatus newStatus);
 
     /**
      * Lấy thống kê về đơn hàng và doanh thu.
