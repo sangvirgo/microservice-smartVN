@@ -299,7 +299,7 @@ public class AdminProductController {
     }
 
     @PostMapping("/{productId}/images")
-    public ResponseEntity<ApiResponse<ImageDTO>> uploadImageForProduct(
+    public ResponseEntity<ApiResponse<?>> uploadImageForProduct(
             @PathVariable Long productId,
             @RequestPart("file") MultipartFile file) {
 
@@ -313,15 +313,23 @@ public class AdminProductController {
         dto.setProductId(productId);
         dto.setCreatedAt(image.getCreatedAt());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(dto, "Image uploaded"));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Image uploaded")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
+
     @DeleteMapping("/images/{imageId}")
-    public ResponseEntity<?> deleteImageById(@PathVariable Long imageId) {
+    public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long imageId) {
         imageService.deleteImage(imageId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Image deleted"));
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .data(null)
+                .message("Image deleted")
+                .status(HttpStatus.OK.value())
+                .build());
     }
 
 

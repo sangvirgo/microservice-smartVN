@@ -23,7 +23,7 @@ public class FeignClientConfig {
             @Override
             public void apply(RequestTemplate template) {
                 template.header("X-API-KEY", internalApiKey);
-                template.header("Content-Type", "application/json");
+//                template.header("Content-Type", "application/json");
             }
         };
     }
@@ -34,11 +34,6 @@ public class FeignClientConfig {
                 5000,  // connectTimeout (ms)
                 10000  // readTimeout (ms)
         );
-    }
-
-    @Bean
-    public ErrorDecoder errorDecoder() {
-        return new FeignErrorDecoder();
     }
 
     @Bean
