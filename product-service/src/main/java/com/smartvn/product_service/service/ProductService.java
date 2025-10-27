@@ -381,7 +381,7 @@ public class ProductService {
             );
         }
 
-        if (request.getImageUrls() != null || request.getImageUrls().isEmpty()) {
+        if (request.getImageUrls() != null || !request.getImageUrls().isEmpty()) {
             for (var img : request.getImageUrls()) {
                 if (!img.getDownloadUrl().startsWith("http")) {
                     throw new AppException(
@@ -664,6 +664,13 @@ public class ProductService {
             CreateProductRequest req,
             Category category) {
 
+        if (req.getVariants() == null || req.getVariants().isEmpty()) {
+            throw new AppException(
+                    "Product must have at least one variant: " + req.getTitle(),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
         Product product = new Product();
         product.setTitle(req.getTitle());
         product.setBrand(req.getBrand());
@@ -694,29 +701,36 @@ public class ProductService {
     }
 
     private Category getOrCreateCategoryIgnoreCase(String topLevelName, String secondLevelName) {
-        // ✅ Dùng custom query thay vì stream
-        Category parentCategory = categoryRepository
-                .findByNameAndLevelIgnoreCase(topLevelName, 1)
-                .orElseGet(() -> {
-                    Category newParent = new Category();
-                    newParent.setName(capitalize(topLevelName));
-                    newParent.setLevel(1);
-                    newParent.setIsParent(true);
-                    return categoryRepository.save(newParent);
-                });
+        // ✅ THÊM synchronized hoặc dùng findOrCreate atomic
+        Category parentCategory;
 
-        Category childCategory = categoryRepository
-                .findByNameAndLevelIgnoreCase(secondLevelName, 2)
-                .filter(c -> c.getParentCategory() != null &&
-                        c.getParentCategory().getId().equals(parentCategory.getId()))
-                .orElseGet(() -> {
-                    Category newChild = new Category();
-                    newChild.setName(capitalize(secondLevelName));
-                    newChild.setLevel(2);
-                    newChild.setIsParent(false);
-                    newChild.setParentCategory(parentCategory);
-                    return categoryRepository.save(newChild);
-                });
+        synchronized (this) {  // Simple lock
+            parentCategory = categoryRepository
+                    .findByNameAndLevelIgnoreCase(topLevelName, 1)
+                    .orElseGet(() -> {
+                        Category newParent = new Category();
+                        newParent.setName(capitalize(topLevelName));
+                        newParent.setLevel(1);
+                        newParent.setIsParent(true);
+                        return categoryRepository.save(newParent);
+                    });
+        }
+
+        Category childCategory;
+        synchronized (this) {
+            childCategory = categoryRepository
+                    .findByNameAndLevelIgnoreCase(secondLevelName, 2)
+                    .filter(c -> c.getParentCategory() != null &&
+                            c.getParentCategory().getId().equals(parentCategory.getId()))
+                    .orElseGet(() -> {
+                        Category newChild = new Category();
+                        newChild.setName(capitalize(secondLevelName));
+                        newChild.setLevel(2);
+                        newChild.setIsParent(false);
+                        newChild.setParentCategory(parentCategory);
+                        return categoryRepository.save(newChild);
+                    });
+        }
 
         return childCategory;
     }

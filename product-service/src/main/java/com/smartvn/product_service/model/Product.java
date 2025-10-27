@@ -55,7 +55,7 @@ public class Product {
     @Column(name = "rom_capacity", length = 50)
     private String romCapacity;
 
-    @Column(name = "screen_size", length = 50)
+    @Column(name = "screen_size", length = 200)
     private String screenSize;
 
     @Column(name = "detailed_review", columnDefinition = "TEXT")

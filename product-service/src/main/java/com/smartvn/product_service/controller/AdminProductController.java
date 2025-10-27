@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,6 +46,78 @@ public class AdminProductController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(dto, "Product created successfully"));
+    }
+
+    /**
+     * ✅ TẠO NHIỀU SẢN PHẨM (BULK IMPORT)
+     */
+    @PostMapping("/bulk")  // ✅ SỬA: Bỏ /admin/
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createBulkProducts(
+            @RequestBody List<CreateProductRequest> requests) {
+
+        log.info("📦 Bulk creating {} products", requests.size());
+
+        // ✅ LOG CHI TIẾT từng product
+        for (int i = 0; i < requests.size(); i++) {
+            CreateProductRequest req = requests.get(i);
+            log.info("  [{}] {} - {} (category: {}/{}, variants: {}, images: {})",
+                    i, req.getTitle(), req.getBrand(),
+                    req.getTopLevelCategory(), req.getSecondLevelCategory(),
+                    req.getVariants() != null ? req.getVariants().size() : 0,
+                    req.getImageUrls() != null ? req.getImageUrls().size() : 0
+            );
+        }
+
+        try {
+            ProductService.BulkImportResult result =
+                    productService.createBulkProductsOptimized(requests);
+
+            // ✅ THÊM PHẦN NÀY - Tạo response summary
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalRequested", requests.size());
+            summary.put("successCount", result.getSuccessProducts().size());
+            summary.put("failureCount", result.getFailures().size());
+
+            // Convert products sang DTO
+            List<ProductAdminViewDTO> successDTOs = result.getSuccessProducts()
+                    .stream()
+                    .map(this::convertToAdminDTO)
+                    .collect(Collectors.toList());
+
+            summary.put("successProducts", successDTOs);
+            summary.put("failures", result.getFailures());
+
+            // ✅ LOG kết quả
+            log.info("✅ Bulk import completed: {}/{} success, {} failed",
+                    result.getSuccessProducts().size(),
+                    requests.size(),
+                    result.getFailures().size());
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(
+                            summary,
+                            String.format("Bulk import completed: %d/%d products created",
+                                    result.getSuccessProducts().size(),
+                                    requests.size())
+                    ));
+
+        } catch (Exception e) {
+            log.error("❌ Bulk import failed", e);
+
+            // ✅ Trả về lỗi chi tiết
+            Map<String, Object> errorInfo = new HashMap<>();
+            errorInfo.put("error", e.getMessage());
+            errorInfo.put("type", e.getClass().getSimpleName());
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(
+                            "Bulk import failed: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "BULK_IMPORT_ERROR"
+                    ));
+        }
     }
 
     /**
