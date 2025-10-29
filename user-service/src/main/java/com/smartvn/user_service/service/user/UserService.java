@@ -265,4 +265,19 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User " + userId + " not found"));
         return convertUserToDto(user);
     }
+
+    @Transactional
+    public void softDeleteAddress(Long userId, Long addressId) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new EntityNotFoundException("Address not found"));
+
+        // Kiểm tra quyền sở hữu
+        if (!address.getUser().getId().equals(userId)) {
+            throw new AppException("Unauthorized", HttpStatus.FORBIDDEN);
+        }
+
+        // Soft delete
+        address.setIsActive(false);
+        addressRepository.save(address);
+    }
 }

@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -145,12 +146,10 @@ public class OrderService {
         return savedOrder;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<Order> getOrderHistory(Long userId, OrderStatus orderStatus) {
-        if(orderStatus!=null) {
-            return orderRepository.findByUserIdAndOrderStatus(userId, orderStatus);
-        }
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        // Delegate sang method mới
+        return searchUserOrders(userId, null, orderStatus, null, null);
     }
 
     @Transactional(readOnly = true)
@@ -309,6 +308,67 @@ public class OrderService {
         order.setOrderStatus(newStatus);
         return orderRepository.save(order);
     }
+
+
+
+    /**
+     * Tìm kiếm orders của user với filters
+     * @param userId ID của user (bắt buộc - security)
+     * @param orderId Filter theo order ID cụ thể (optional)
+     * @param status Filter theo trạng thái (optional)
+     * @param startDate Filter từ ngày (optional)
+     * @param endDate Filter đến ngày (optional)
+     */
+    public List<Order> searchUserOrders(
+            Long userId,
+            Long orderId,
+            OrderStatus status,
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        Specification<Order> spec = Specification.where(null);
+
+        // ✅ LUÔN LUÔN filter theo userId (security - quan trọng!)
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("userId"), userId)
+        );
+
+        // ✅ Nếu có orderId -> tìm order cụ thể
+        if (orderId != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("id"), orderId)
+            );
+        }
+
+        // ✅ Nếu có status -> lọc theo trạng thái
+        if (status != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("orderStatus"), status)
+            );
+        }
+
+        // ✅ Nếu có startDate -> lọc từ ngày
+        if (startDate != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("createdAt"),
+                            startDate.atStartOfDay())
+            );
+        }
+
+        // ✅ Nếu có endDate -> lọc đến ngày
+        if (endDate != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("createdAt"),
+                            endDate.atTime(23, 59, 59))
+            );
+        }
+
+        // ✅ Sắp xếp theo ngày tạo mới nhất
+        return orderRepository.findAll(spec,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+    }
+
 
     private void validateStatusTransition(OrderStatus current, OrderStatus next) {
         log.debug("Validating transition from {} to {}", current, next);

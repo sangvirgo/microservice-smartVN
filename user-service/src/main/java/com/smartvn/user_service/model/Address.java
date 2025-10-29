@@ -53,4 +53,14 @@ public class Address {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true; // Mặc định active
+
+    @PrePersist
+    protected void onCreate() {
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
 }

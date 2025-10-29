@@ -17,12 +17,14 @@ import com.smartvn.order_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,40 +43,53 @@ public class OrderController {
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     @GetMapping("/user")
-    private ResponseEntity<?> getUserOrders(@RequestHeader("Authorization") String jwt){
+    public ResponseEntity<?> getUserOrders(
+            @RequestHeader("Authorization") String jwt,
+            @RequestParam(required = false) Long orderId,           // ✅ Tìm theo ID cụ thể
+            @RequestParam(required = false) OrderStatus status,     // ✅ Lọc theo trạng thái
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,  // ✅ Từ ngày
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate     // ✅ Đến ngày
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if ( authentication == null ){
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Unauthorized"));
         }
+
         try {
             Long userId = userService.getUserIdFromJwt(jwt);
             userService.validateUser(userId);
-            List<Order> orders = orderService.getOrderHistory(userId, null);
+
+            // ✅ GỌI method mới với filters
+            List<Order> orders = orderService.searchUserOrders(
+                    userId, orderId, status, startDate, endDate
+            );
+
             List<OrderDTO> orderDTOS = orders.stream()
                     .map(OrderDTO::new)
                     .collect(Collectors.toList());
+
             for (OrderDTO dto : orderDTOS) {
                 enrichOrderDTO(dto);
             }
 
             Map<String, Object> response = new HashMap<>();
             response.put("orders", orderDTOS);
-            response.put("messages", "Successfully retrieved order history");
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+            response.put("message", "Successfully retrieved order history");
+            response.put("total", orderDTOS.size());
+
+            return ResponseEntity.ok(response);
+
         } catch (AppException e) {
-            log.error("Error while get order.", e.getMessage());
+            log.error("Error while getting orders: {}", e.getMessage());
             return ResponseEntity.status(e.getStatus())
-                    .body(Map.of(
-                            "error", e.getMessage(), "code", "ORDER_ERROR"
-                    ));
+                    .body(Map.of("error", e.getMessage(), "code", "ORDER_ERROR"));
         } catch (Exception e) {
-            log.error("Unexpected error get order: ", e);
+            log.error("Unexpected error getting orders: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "Unexpected error occurred",
-                            "code", "INTERNAL_SERVER_ERROR"
-                    ));
+                    .body(Map.of("error", "Unexpected error occurred", "code", "INTERNAL_SERVER_ERROR"));
         }
     }
 
@@ -142,57 +157,12 @@ public class OrderController {
         }
     }
 
-    // ... (các phương thức khác giữ nguyên)
     @GetMapping("/{id}")
     public ResponseEntity<OrderDTO> findOrderById(@PathVariable("id") Long orderId) {
         Order order = orderService.findOrderById(orderId);
         OrderDTO orderDTO = new OrderDTO(order);
         enrichOrderDTO(orderDTO);
         return new ResponseEntity<>(orderDTO, HttpStatus.OK);
-    }
-
-    @GetMapping("/status")
-    public ResponseEntity<?> getByStatusOrders(@RequestHeader("Authorization") String jwt, OrderStatus orderStatus) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Unauthorized"));
-        }
-        try {
-            Long userId = userService.getUserIdFromJwt(jwt);
-            userService.validateUser(userId);
-            List<Order> orders = orderService.getOrderHistory(userId, orderStatus);
-            if(orders.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.OK)
-                        .body(Map.of(
-                                "message", "Không có đơn hàng với trạng thái "+ orderStatus,
-                                "code", "EMPTY_ORDER"
-                        ));
-            }
-            List<OrderDTO> orderDTOS = orders.stream()
-                    .map(OrderDTO::new)
-                    .collect(Collectors.toList());
-            for (OrderDTO dto : orderDTOS) {
-                enrichOrderDTO(dto);
-            }
-            Map<String, Object> response = new HashMap<>();
-            response.put("orders", orderDTOS);
-            response.put("messages", "Successfully retrieved order history");
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        } catch (AppException e) {
-            log.error("Error while get order.", e.getMessage());
-            return ResponseEntity.status(e.getStatus())
-                    .body(Map.of(
-                            "error", e.getMessage(), "code", "ORDER_ERROR"
-                    ));
-        } catch (Exception e) {
-            log.error("Unexpected error get order: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "Unexpected error occurred",
-                            "code", "INTERNAL_SERVER_ERROR"
-                    ));
-        }
     }
 
     @PutMapping("/cancel/{orderId}")

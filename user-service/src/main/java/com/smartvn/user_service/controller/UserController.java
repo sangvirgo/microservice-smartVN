@@ -106,7 +106,9 @@ public class UserController {
 
             if(user.getAddresses() != null) {
                 for (Address a: user.getAddresses()) {
-                    addressDTOS.add(new AddressDTO(a));
+                    if (a.getIsActive()) {
+                        addressDTOS.add(new AddressDTO(a));
+                    }
                 }
             }
 
@@ -117,5 +119,19 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "An unexpected error occurred: " + e.getMessage(), "code", "INTERNAL_ERROR"));
         }
+    }
+
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<Void>> deleteAddress(
+            @RequestHeader("Authorization") String jwt,
+            @PathVariable Long addressId) {
+
+        User user = userService.findUserByJwt(jwt);
+        userService.softDeleteAddress(user.getId(), addressId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(null, "Địa chỉ đã được xóa thành công")
+        );
     }
 }
