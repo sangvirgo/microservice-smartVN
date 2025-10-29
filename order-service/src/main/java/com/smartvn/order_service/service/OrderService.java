@@ -233,19 +233,16 @@ public class OrderService {
 
         Specification<Order> spec = Specification.where(null);
 
-        // ✅ SAFE SEARCH - Kiểm tra trước khi parse
         if (search != null && !search.trim().isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 try {
+                    // ✅ Thử parse thành Long để search theo orderId
                     Long searchId = Long.parseLong(search.trim());
-                    return cb.or(
-                            cb.equal(root.get("id"), searchId),
-                            cb.equal(root.get("userId"), searchId)
-                    );
+                    return cb.equal(root.get("id"), searchId);
                 } catch (NumberFormatException e) {
-                    // Nếu không phải số, search theo user email (cần join)
+                    // ✅ Không phải số → search theo userEmail
                     return cb.like(
-                            cb.lower(root.get("userId").as(String.class)),
+                            cb.lower(root.get("userEmail")),
                             "%" + search.toLowerCase() + "%"
                     );
                 }
