@@ -6,6 +6,7 @@ import com.smartvn.order_service.dto.admin.OrderStatsDTO;
 import com.smartvn.order_service.dto.admin.RevenueChartDTO;
 import com.smartvn.order_service.dto.product.InventoryCheckRequest;
 import com.smartvn.order_service.dto.product.ProductDTO;
+import com.smartvn.order_service.dto.user.UserDTO;
 import com.smartvn.order_service.enums.OrderStatus;
 import com.smartvn.order_service.enums.PaymentMethod;
 import com.smartvn.order_service.enums.PaymentStatus;
@@ -98,9 +99,11 @@ public class OrderService {
             }
         }
 
+        UserDTO user = userServiceClient.getUserById(userId);
 
         Order order = new Order();
         order.setUserId(userId);
+        order.setUserEmail(user.getEmail());
         order.setShippingAddressId(addressId);
         order.setOrderStatus(OrderStatus.PENDING);
         order.setPaymentMethod(PaymentMethod.COD);

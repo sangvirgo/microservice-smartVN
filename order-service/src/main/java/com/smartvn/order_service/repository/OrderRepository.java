@@ -90,7 +90,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * Tìm kiếm đơn hàng với nhiều điều kiện (Admin)
      */
     @Query("SELECT o FROM Order o WHERE " +
-            "(:search IS NULL OR CAST(o.id AS string) LIKE CONCAT('%', :search, '%') OR CAST(o.userId AS string) LIKE CONCAT('%', :search, '%')) " +
+            "(:search IS NULL OR " +
+            "  CAST(o.id AS string) LIKE CONCAT('%', :search, '%') OR " +
+            "  LOWER(o.userEmail) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:status IS NULL OR o.orderStatus = :status) " +
             "AND (:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus) " +
             "AND (:startDate IS NULL OR o.createdAt >= :startDate) " +

@@ -59,6 +59,9 @@ public class Order {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "user_email", length = 100)
+    private String userEmail;
+
     // Không tạo quan hệ với Address, chỉ lưu addressId
     @Column(name = "shipping_address_id", nullable = false)
     private Long shippingAddressId;

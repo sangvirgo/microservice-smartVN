@@ -78,6 +78,7 @@ public class InternalOrderController {
         OrderAdminViewDTO dto = new OrderAdminViewDTO();
         dto.setId(order.getId());
         dto.setUserId(order.getUserId());
+        dto.setUserEmail(order.getUserEmail());
         dto.setOrderStatus(order.getOrderStatus().name());
         dto.setPaymentStatus(order.getPaymentStatus().name());
         dto.setPaymentMethod(order.getPaymentMethod() != null
@@ -175,7 +176,6 @@ public class InternalOrderController {
     private void enrichWithUserInfo(OrderAdminViewDTO dto, Long userId) {
         try {
             UserDTO user = userServiceClient.getUserById(userId);
-            dto.setUserEmail(user.getEmail());
             dto.setUserName(user.getFirstName() + " " + user.getLastName());
         } catch (FeignException e) {
             log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
