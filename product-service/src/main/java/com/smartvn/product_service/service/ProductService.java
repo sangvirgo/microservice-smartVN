@@ -600,7 +600,12 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public Page<Product> searchProductsForAdmin(String search, Long categoryId, Boolean isActive, Pageable pageable) {
+    public Page<Product> searchProductsForAdmin(
+            String search,
+            Long categoryId,
+            Boolean isActive,
+            Pageable pageable) {
+
         Specification<Product> spec = Specification.where(null);
 
         if (search != null) {
@@ -608,9 +613,24 @@ public class ProductService {
                     cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%"));
         }
 
+        // ✅ THAY ĐỔI DUY NHẤT Ở ĐÂY
         if (categoryId != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("category").get("id"), categoryId));
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new AppException("Category not found", HttpStatus.NOT_FOUND));
+
+            if (category.getLevel() == 1) {
+                // Parent category → search trong tất cả subcategories
+                List<Long> subCategoryIds = category.getSubCategories().stream()
+                        .map(Category::getId)
+                        .collect(Collectors.toList());
+
+                spec = spec.and((root, query, cb) ->
+                        root.get("category").get("id").in(subCategoryIds));
+            } else {
+                // Child category → search bình thường
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.get("category").get("id"), categoryId));
+            }
         }
 
         if (isActive != null) {
