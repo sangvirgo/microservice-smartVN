@@ -381,16 +381,16 @@ public class ProductService {
             );
         }
 
-        if (request.getImageUrls() != null || !request.getImageUrls().isEmpty()) {
-            for (var img : request.getImageUrls()) {
-                if (!img.getDownloadUrl().startsWith("http")) {
-                    throw new AppException(
-                            "Product must have at least one image",
-                            HttpStatus.BAD_REQUEST
-                    );
-                }
-            }
-        }
+//        if (request.getImageUrls() != null || !request.getImageUrls().isEmpty()) {
+//            for (var img : request.getImageUrls()) {
+//                if (!img.getDownloadUrl().startsWith("http")) {
+//                    throw new AppException(
+//                            "Product must have at least one image",
+//                            HttpStatus.BAD_REQUEST
+//                    );
+//                }
+//            }
+//        }
 
         // 1. VALIDATE CATEGORY
 //        Category category = categoryRepository.findById(request.getCategoryId())
