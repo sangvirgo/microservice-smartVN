@@ -49,22 +49,26 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/{id}/ban").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/{id}/warn").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/{id}/unban").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/{id}/unban").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/products", "/api/v1/admin/products/bulk").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/products/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/products/{id}/images").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/products/images/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/products/*/inventory").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/products/{id}/inventory/**").hasAnyRole("ADMIN", "STAFF")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/products/**").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/products/*/inventory").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/products/{id}/toggle-active").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/products/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/orders/*/status").hasRole("ADMIN") // Chỉ admin mới đổi status
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/orders/{id}").hasAnyRole("ADMIN", "STAFF") // Cho STAFF update
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/orders/stats").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/reviews/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/reviews/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/reviews/**").hasAnyRole("ADMIN", "STAFF")
 
                         .requestMatchers("/api/v1/admin/dashboard/**").hasRole("ADMIN")
-                        // Các request khác (nếu có) cũng yêu cầu xác thực
+
                         .anyRequest().authenticated()
                 )
                 // Thêm filter JWT vào trước filter mặc định

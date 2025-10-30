@@ -381,24 +381,6 @@ public class ProductService {
             );
         }
 
-//        if (request.getImageUrls() != null || !request.getImageUrls().isEmpty()) {
-//            for (var img : request.getImageUrls()) {
-//                if (!img.getDownloadUrl().startsWith("http")) {
-//                    throw new AppException(
-//                            "Product must have at least one image",
-//                            HttpStatus.BAD_REQUEST
-//                    );
-//                }
-//            }
-//        }
-
-        // 1. VALIDATE CATEGORY
-//        Category category = categoryRepository.findById(request.getCategoryId())
-//                .orElseThrow(() -> new AppException(
-//                        "Category not found with id: " + request.getCategoryId(),
-//                        HttpStatus.NOT_FOUND
-//                ));
-
         // 2. VALIDATE VARIANTS
         if (request.getVariants() == null || request.getVariants().isEmpty()) {
             throw new AppException(

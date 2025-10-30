@@ -54,7 +54,7 @@ public class OrderService {
             Long userId,
             Long addressId,
             List<Long> cartItemIds) {
-        Boolean isValidAddress = userServiceClient.validateUserAddress(addressId, userId);
+        Boolean isValidAddress = userServiceClient.validateUserAddress(userId, addressId);
         if (!isValidAddress) {
             throw new AppException(
                     "Address does not belong to user or is invalid",
