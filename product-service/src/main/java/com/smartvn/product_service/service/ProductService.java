@@ -1,5 +1,6 @@
 package com.smartvn.product_service.service;
 
+import com.smartvn.product_service.client.OrderServiceClient;
 import com.smartvn.product_service.dto.InventoryCheckRequest;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.ProductListingDTO;
@@ -40,6 +41,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final InventoryRepository inventoryRepository;
     private final ImageRepository imageRepository;
+    private final OrderServiceClient orderServiceClient;
 
     /**
      * Tìm kiếm sản phẩm với khả năng lọc theo tên category (level 1 hoặc level 2)
@@ -762,5 +764,15 @@ public class ProductService {
                 "Either categoryId or (topLevelCategory + secondLevelCategory) must be provided",
                 HttpStatus.BAD_REQUEST
         );
+    }
+
+    public boolean hasUserPurchasedProduct(Long userId, Long productId) {
+        try {
+            Boolean result = orderServiceClient.hasUserPurchasedProduct(userId, productId);
+            return result != null && result;
+        } catch (Exception e) {
+            log.error("Failed to check purchase status for user {} and product {}", userId, productId, e);
+            return false;
+        }
     }
 }

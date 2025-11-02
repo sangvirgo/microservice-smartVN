@@ -83,7 +83,8 @@ public class SecurityConfig {
                                 "/login/oauth2/**",
                                 "/actuator/health",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**"
+                                "/swagger-ui/**",
+                                "/favicon.ico"
                         ).permitAll()
 
                         // Internal API - protected by ApiKeyAuthFilter

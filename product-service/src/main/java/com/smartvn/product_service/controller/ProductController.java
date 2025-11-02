@@ -78,4 +78,21 @@ public class ProductController {
                 .build();
         return ResponseEntity.ok(response);
     }
+
+
+    /**
+     * Kiểm tra user đã mua sản phẩm chưa
+     */
+    @GetMapping("/{id}/check-purchased")
+    public ResponseEntity<ApiResponse<Boolean>> checkUserPurchased(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+
+        if (userId == null) {
+            return ResponseEntity.ok(ApiResponse.success(false, "User not logged in"));
+        }
+
+        boolean hasPurchased = productService.hasUserPurchasedProduct(userId, id);
+        return ResponseEntity.ok(ApiResponse.success(hasPurchased, "Purchase status checked"));
+    }
 }
