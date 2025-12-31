@@ -1,35 +1,28 @@
-# Giai đoạn 1: Build ứng dụng bằng Maven
+# syntax=docker/dockerfile:1
 FROM eclipse-temurin:21-jdk-alpine AS builder
 
-# Đặt thư mục làm việc bên trong image
 WORKDIR /app
 
-# Sao chép các file cần thiết để tải dependency trước, tận dụng cache của Docker
+# Copy dependency files first
 COPY .mvn/ .mvn
 COPY mvnw pom.xml ./
-
-# Cấp quyền thực thi cho mvnw
 RUN chmod +x ./mvnw
 
-# Tải dependencies
-RUN ./mvnw dependency:go-offline
+# ✅ Cache Maven dependencies với BuildKit
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw dependency:go-offline -B
 
-# Sao chép toàn bộ mã nguồn
+# Copy source
 COPY src ./src
 
-# Build ứng dụng ra file .jar, bỏ qua các bài test
-RUN ./mvnw clean install -DskipTests
+# ✅ Build với cached dependencies
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw clean install -DskipTests -B
 
-# Giai đoạn 2: Tạo image cuối cùng để chạy ứng dụng
+# Runtime stage
 FROM eclipse-temurin:21-jre-alpine
-
 WORKDIR /app
-
-# Chỉ sao chép file .jar đã được build từ giai đoạn 'builder'
 COPY --from=builder /app/target/*.jar app.jar
 
-# Port sẽ được expose tùy theo service (xem bên dưới)
 EXPOSE 8888
-
-# Lệnh để khởi chạy ứng dụng khi container bắt đầu
 ENTRYPOINT ["java", "-jar", "app.jar"]

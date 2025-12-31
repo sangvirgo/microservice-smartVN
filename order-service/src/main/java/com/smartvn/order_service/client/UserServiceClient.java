@@ -20,7 +20,7 @@ public interface UserServiceClient {
     /**
      * Lấy thông tin user
      */
-    @GetMapping("/api/v1/internal/users/{userId}")
+    @GetMapping("/api/v1/internal/users/admin/{userId}")
     UserDTO getUserById(@PathVariable("userId") Long userId);
 
     /**
