@@ -1,5 +1,6 @@
 package com.smartvn.admin_service.client;
 
+import com.smartvn.admin_service.dto.ai.ProductExportDTO;
 import com.smartvn.admin_service.dto.product.*;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +46,13 @@ public class ProductServiceFallback implements ProductServiceClient {
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("Product service đang bảo trì. Vui lòng thử lại sau."));
     }
+
+    @Override
+    public List<ProductExportDTO> exportProducts() {
+        log.error("Product Service unavailable. Cannot export products.");
+        return Collections.emptyList();
+    }
+
 
     @Override
     public ResponseEntity<ApiResponse<InventoryDTO>> updateInventory(Long productId, Long inventoryId, UpdateInventoryRequest request) {

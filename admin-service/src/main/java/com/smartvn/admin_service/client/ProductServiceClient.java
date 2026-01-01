@@ -1,6 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.config.FeignClientConfig;
+import com.smartvn.admin_service.dto.ai.ProductExportDTO;
 import com.smartvn.admin_service.dto.product.*;
 import com.smartvn.admin_service.dto.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -64,6 +65,9 @@ public interface ProductServiceClient {
      */
     @DeleteMapping("${api.prefix}/internal/products/admin/{productId}")
     ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable("productId") Long productId);
+
+    @GetMapping("${api.prefix}/internal/export/products")
+    List<ProductExportDTO> exportProducts();
 
     /**
      * Cập nhật thông tin tồn kho cho một variant của sản phẩm.
