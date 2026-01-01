@@ -1,6 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.config.FeignClientConfig;
+import com.smartvn.admin_service.dto.ai.InteractionExportDTO;
 import com.smartvn.admin_service.dto.dashboard.RevenueChartDTO;
 import com.smartvn.admin_service.dto.order.OrderAdminViewDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.order.OrderStatsDTO; // Cần tạo DTO này
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate; // Hoặc LocalDateTime tùy endpoint gốc
+import java.util.List;
 
 /**
  * Feign Client để giao tiếp với Order Service.
@@ -81,4 +83,7 @@ public interface OrderServiceClient {
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate
     );
+
+    @GetMapping("${api.prefix}/internal/orders/export/interactions")
+    List<InteractionExportDTO> exportOrderInteractions();
 }

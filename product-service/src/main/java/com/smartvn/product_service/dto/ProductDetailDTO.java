@@ -24,6 +24,7 @@ public class ProductDetailDTO {
     private String description;
     private String detailedReview;
     private String powerfulPerformance;
+    private List<String> similarProductIds;
 
     // Specs
     private String color;

@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import com.smartvn.admin_service.dto.user.UserDTO;
 import com.smartvn.admin_service.dto.user.UserStatsDTO;
 
+import java.util.Collections;
+import java.util.List;
+
 @Slf4j
 public class UserServiceFallback implements UserServiceClient{
     @Override
@@ -75,4 +78,11 @@ public class UserServiceFallback implements UserServiceClient{
         log.error("User Service unavailable. Cannot get new users count.");
         return 0L; // Trả về 0 thay vì throw exception
     }
+
+    @Override
+    public List exportUserInteractions() {
+        log.error("User Service unavailable. Cannot export user interactions.");
+        return Collections.emptyList(); // Trả về list rỗng thay vì throw exception
+    }
+
 }

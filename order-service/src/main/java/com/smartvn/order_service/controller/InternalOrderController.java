@@ -7,6 +7,7 @@ import com.smartvn.order_service.dto.admin.OrderAdminViewDTO;
 import com.smartvn.order_service.dto.admin.OrderItemAdminDTO;
 import com.smartvn.order_service.dto.admin.OrderStatsDTO;
 import com.smartvn.order_service.dto.admin.RevenueChartDTO;
+import com.smartvn.order_service.dto.ai.InteractionExportDTO;
 import com.smartvn.order_service.dto.product.ProductDTO;
 import com.smartvn.order_service.dto.response.ApiResponse;
 import com.smartvn.order_service.dto.user.AddressDTO;
@@ -31,6 +32,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -204,5 +207,27 @@ public class InternalOrderController {
     private void addressInfoFallback(OrderAdminViewDTO dto, Long addressId, Throwable t) {
         log.error("User service unavailable for addressId {}", addressId);
         dto.setShippingAddressDetails("N/A");
+    }
+
+    @GetMapping("/export/interactions")
+    public ResponseEntity<List<InteractionExportDTO>> exportOrderInteractions() {
+        // Lấy tất cả orders đã DELIVERED
+        List<Order> completedOrders = orderRepository
+                .findByOrderStatus(OrderStatus.DELIVERED);
+
+        List<InteractionExportDTO> interactions = new ArrayList<>();
+
+        for (Order order : completedOrders) {
+            for (OrderItem item : order.getOrderItems()) {
+                InteractionExportDTO dto = new InteractionExportDTO();
+                dto.setUser_id(order.getUserId().toString());
+                dto.setProduct_id(item.getProductId().toString());
+                dto.setWeight(3.0f);  // Purchase weight = 3
+                dto.setType("PURCHASE");
+                interactions.add(dto);
+            }
+        }
+
+        return ResponseEntity.ok(interactions);
     }
 }

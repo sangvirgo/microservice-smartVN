@@ -270,7 +270,7 @@ public class ProductService {
         }
     }
 
-    private ProductListingDTO toListingDTO(Product product) {
+    public ProductListingDTO toListingDTO(Product product) {
         ProductListingDTO dto = new ProductListingDTO();
         dto.setId(product.getId());
         dto.setTitle(product.getTitle());

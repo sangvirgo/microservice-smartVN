@@ -6,8 +6,10 @@ import com.smartvn.product_service.dto.InventoryDTO;
 import com.smartvn.product_service.dto.ProductDTO;
 import com.smartvn.product_service.dto.ProductDetailDTO;
 import com.smartvn.product_service.dto.admin.ProductStatsDTO;
+import com.smartvn.product_service.dto.ai.ProductExportDTO;
 import com.smartvn.product_service.dto.response.ApiResponse;
 import com.smartvn.product_service.model.Inventory;
+import com.smartvn.product_service.model.Product;
 import com.smartvn.product_service.repository.ProductRepository;
 import com.smartvn.product_service.service.InventoryService;
 import com.smartvn.product_service.service.ProductService;
@@ -106,6 +108,26 @@ public class InternalProductController {
         stats.setTotalProducts(productRepository.count());
         stats.setActiveProducts(productRepository.countByIsActive(true));
         return ResponseEntity.ok(ApiResponse.success(stats, "Stats retrieved"));
+    }
+
+
+    @GetMapping("/export/products")
+    public ResponseEntity<List<ProductExportDTO>> exportProducts() {
+        List<Product> products = productRepository.findAll();
+
+        List<ProductExportDTO> exportData = products.stream()
+                .map(p -> {
+                    ProductExportDTO dto = new ProductExportDTO();
+                    dto.setProduct_id(p.getId().toString());
+                    dto.setName(p.getTitle());
+                    dto.setDescription(p.getDescription() != null ? p.getDescription() : "");
+                    dto.setBrand(p.getBrand());
+                    dto.setCategory(p.getCategory() != null ? p.getCategory().getName() : "");
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(exportData);
     }
 
 }

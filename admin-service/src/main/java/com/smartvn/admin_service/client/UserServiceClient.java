@@ -1,6 +1,7 @@
 package com.smartvn.admin_service.client;
 
 import com.smartvn.admin_service.config.FeignClientConfig;
+import com.smartvn.admin_service.dto.ai.InteractionExportDTO;
 import com.smartvn.admin_service.dto.user.UserDTO; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.response.ApiResponse; // Cần tạo DTO này
 import com.smartvn.admin_service.dto.user.UserStatsDTO; // Cần tạo DTO này
@@ -9,6 +10,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page; // Sử dụng Page của Spring Data
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * Feign Client để giao tiếp với User Service.
@@ -80,4 +83,7 @@ public interface UserServiceClient {
 
     @GetMapping("${api.prefix}/internal/users/stats/new-this-month")
     Long getNewUsersThisMonth();
+
+    @GetMapping("${api.prefix}/internal/user/export/interactions")
+    List<InteractionExportDTO> exportUserInteractions();
 }

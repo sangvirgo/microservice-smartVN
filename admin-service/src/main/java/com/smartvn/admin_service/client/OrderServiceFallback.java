@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 public class OrderServiceFallback implements OrderServiceClient{
@@ -64,4 +65,11 @@ public class OrderServiceFallback implements OrderServiceClient{
                         "Service unavailable - showing empty data"
                 ));
     }
+
+    @Override
+    public List exportOrderInteractions() {
+        log.error("Order Service unavailable. Cannot export order interactions.");
+        return Collections.emptyList();
+    }
+
 }
