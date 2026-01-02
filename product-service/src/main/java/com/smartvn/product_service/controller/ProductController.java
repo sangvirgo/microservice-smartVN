@@ -72,6 +72,9 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
+    private Long toLongOrNull(Long value) {
+        return value;
+    }
     /**
      * API để lấy thông tin chi tiết của một sản phẩm.
      */
@@ -80,27 +83,43 @@ public class ProductController {
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
 
+        log.info("📦 Product detail request - productId: {}, userId: {}", id, userId);
+
         ProductDetailDTO productDetail = productService.getProductDetail(id);
 
         // ✅ GỌI AI ĐỂ LẤY SIMILAR PRODUCTS
         try {
             SimilarRecommendDTO aiResponse = recommendationClient
-                    .getProductDetailRecommendations(
-                            id.toString(),
-                            userId != null ? userId.intValue() : null,
-                            10
-                    );
+                    .getProductDetailRecommendations(id.toString(), userId, 10);
 
-            // Thêm vào response (cần thêm field similarProductIds trong ProductDetailDTO)
-            productDetail.setSimilarProductIds(aiResponse.getProduct_ids());
+            log.info("✅ Similar products: strategy={}, count={}",
+                    aiResponse.getStrategy(), aiResponse.getCount());
+
+            // ✅ CONVERT IDs → FULL ProductListingDTO (thay vì chỉ IDs)
+            List<ProductListingDTO> similarProducts = aiResponse.getProduct_ids().stream()
+                    .map(productId -> {
+                        try {
+                            Product p = productService.findById(Long.parseLong(productId));
+                            return productService.toListingDTO(p);
+                        } catch (Exception e) {
+                            log.warn("⚠️ Similar product {} not found", productId);
+                            return null;
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // ✅ GÁN VÀO RESPONSE (cần thêm field similarProducts trong DTO)
+            productDetail.setSimilarProducts(similarProducts);
 
         } catch (Exception e) {
-            log.warn("Failed to get AI recommendations: {}", e.getMessage());
-            // Không throw exception - tiếp tục trả product detail
+            log.warn("⚠️ Failed to get similar products: {}", e.getMessage());
+            // Không throw - tiếp tục trả product detail
         }
 
         return ResponseEntity.ok(ApiResponse.success(productDetail, "Product detail"));
     }
+
 
 
     /**
@@ -124,29 +143,59 @@ public class ProductController {
     public ResponseEntity<ApiResponse<List<ProductListingDTO>>> getHomepageRecommendations(
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
 
-        try {
-            HomepageRecommendDTO aiResponse = recommendationClient
-                    .getHomepageRecommendations(
-                            userId != null ? userId.intValue() : null,
-                            10
-                    );
+        log.info("🎯 Homepage recommendations request - userId: {}", userId);
 
-            // Convert product IDs sang ProductListingDTO
+        try {
+            // ✅ GỌI AI SERVICE (X-API-KEY tự động inject)
+            HomepageRecommendDTO aiResponse = recommendationClient
+                    .getHomepageRecommendations(userId, 10);
+
+            log.info("✅ AI Response: strategy={}, count={}, ids={}",
+                    aiResponse.getStrategy(),
+                    aiResponse.getCount(),
+                    aiResponse.getProduct_ids());
+
+            // ✅ CONVERT PRODUCT IDs → FULL ProductListingDTO
             List<ProductListingDTO> products = aiResponse.getProduct_ids().stream()
-                    .map(Long::parseLong)
-                    .map(productService::findById)
-                    .map(productService::toListingDTO)  // Dùng method có sẵn
+                    .map(id -> {
+                        try {
+                            return Long.parseLong(id);
+                        } catch (NumberFormatException e) {
+                            log.warn("⚠️ Invalid product ID: {}", id);
+                            return null;
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)  // Remove nulls
+                    .map(productId -> {
+                        try {
+                            Product product = productService.findById(productId);
+                            return productService.toListingDTO(product);
+                        } catch (Exception e) {
+                            log.warn("⚠️ Product {} not found", productId);
+                            return null;
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)  // Remove nulls
                     .collect(Collectors.toList());
 
-            return ResponseEntity.ok(ApiResponse.success(products, "Recommendations"));
+            log.info("✅ Returning {} products to FE", products.size());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    products,
+                    "Recommendations (strategy: " + aiResponse.getStrategy() + ")"
+            ));
 
         } catch (Exception e) {
-            log.error("Failed to get homepage recommendations", e);
-            // Fallback: return popular products
+            log.error("❌ Failed to get homepage recommendations", e);
+
+            // ✅ FALLBACK: Return empty list
             return ResponseEntity.ok(ApiResponse.success(
                     Collections.emptyList(),
-                    "Service unavailable"
+                    "AI service unavailable"
             ));
         }
     }
+
+
+
 }

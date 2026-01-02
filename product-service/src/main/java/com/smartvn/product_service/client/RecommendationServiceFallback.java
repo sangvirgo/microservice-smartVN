@@ -12,14 +12,13 @@ import java.util.Collections;
 public class RecommendationServiceFallback implements RecommendationServiceClient {
 
     @Override
-    public HomepageRecommendDTO getHomepageRecommendations(Integer userId, Integer topK) {
+    public HomepageRecommendDTO getHomepageRecommendations(Long userId, int topK) {
         log.error("AI service unavailable - returning empty recommendations");
         return new HomepageRecommendDTO(Collections.emptyList(), "fallback", 0);
     }
 
     @Override
-    public SimilarRecommendDTO getProductDetailRecommendations(
-            String productId, Integer userId, Integer topK) {
+    public SimilarRecommendDTO getProductDetailRecommendations(String productId, Long userId, int topK) {
         log.error("AI service unavailable - returning empty similar products");
         return new SimilarRecommendDTO(Collections.emptyList(), "fallback", 0);
     }
