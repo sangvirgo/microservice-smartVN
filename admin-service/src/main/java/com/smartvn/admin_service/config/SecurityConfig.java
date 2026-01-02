@@ -39,6 +39,8 @@ public class SecurityConfig {
                 // Cấu hình phân quyền cho các request
                 .authorizeHttpRequests(auth -> auth
                         // Cho phép truy cập các endpoint public (health check, swagger)
+                        .requestMatchers("/api/v1/internal/**").permitAll()
+
                         .requestMatchers(
                                 "/actuator/health",
                                 "/v3/api-docs/**",

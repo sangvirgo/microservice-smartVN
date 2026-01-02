@@ -19,6 +19,14 @@ spring:
           filters:
             - StripPrefix=0
 
+        # THÊM: Internal Admin Export Routes (KHÔNG cần Authentication filter)
+        - id: internal-admin-export-route
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/v1/internal/admin/**
+          filters:
+            - StripPrefix=0
+
         # === 1. User Service Route ===
         - id: user-service-route
           uri: lb://user-service

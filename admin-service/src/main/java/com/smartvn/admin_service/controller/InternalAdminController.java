@@ -7,29 +7,42 @@ import com.smartvn.admin_service.service.DataExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("${api.prefix}/internal/admin/export")
+@RequestMapping("${api.prefix}/internal/admin")
 @RequiredArgsConstructor
 public class InternalAdminController {
     private final DataExportService dataExportService;
     private final ProductServiceClient productServiceClient;
 
-    // AI service gọi để lấy ALL interactions (merged)
-    @GetMapping("/interactions")
-    public ResponseEntity<List<InteractionExportDTO>> exportInteractions() {
-        List<InteractionExportDTO> data = dataExportService.aggregateAllInteractions();
-        return ResponseEntity.ok(data);
-    }
+    @GetMapping("/export/products")
+    public ResponseEntity<List<ProductExportDTO>> exportProducts(
+            @RequestHeader("X-API-KEY") String apiKey
+    ) {
+        // Validate API key
+        if (!apiKey.equals("a-very-secret-key-for-internal-communication")) {
+            return ResponseEntity.status(401).build();
+        }
 
-    // AI service gọi để lấy products (forward request)
-    @GetMapping("/products")
-    public ResponseEntity<List<ProductExportDTO>> exportProducts() {
-        List<ProductExportDTO> products = productServiceClient.exportProducts();
+        List<ProductExportDTO> products = dataExportService.getAllProducts();
         return ResponseEntity.ok(products);
     }
+
+    @GetMapping("/export/interactions")
+    public ResponseEntity<List<InteractionExportDTO>> exportInteractions(
+            @RequestHeader("X-API-KEY") String apiKey
+    ) {
+        if (!apiKey.equals("a-very-secret-key-for-internal-communication")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        List<InteractionExportDTO> interactions = dataExportService.aggregateAllInteractions();
+        return ResponseEntity.ok(interactions);
+    }
+
 }
