@@ -54,6 +54,14 @@ spring:
           filters:
             - StripPrefix=0
             - Authentication
+            
+        # === 5. Recommend Service Route (THÊM MỚI) ===
+        - id: recommend-service-internal
+          uri: lb://RECOMMEND-SERVICE
+          predicates:
+            - Path=/api/v1/internal/recommend/**
+          filters:
+            - StripPrefix=0
 
       globalcors:
         cors-configurations:
