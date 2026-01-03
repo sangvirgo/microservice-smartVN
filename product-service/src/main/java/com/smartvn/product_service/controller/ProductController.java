@@ -14,7 +14,9 @@ import com.smartvn.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -92,10 +94,26 @@ public class ProductController {
             SimilarRecommendDTO aiResponse = recommendationClient
                     .getProductDetailRecommendations(id.toString(), userId, 10);
 
+            // ✅ CHECK NULL/EMPTY - CHỈ 1 LẦN
+            if (aiResponse == null ||
+                    aiResponse.getProduct_ids() == null ||
+                    aiResponse.getProduct_ids().isEmpty()) {
+                log.warn("⚠️ AI returned empty similar products - using fallback");
+
+                // ✅ FALLBACK: Lấy sản phẩm mới nhất làm similar products
+                List<ProductListingDTO> fallbackSimilar = getFallbackSimilarProducts(id);
+                productDetail.setSimilarProducts(fallbackSimilar);
+
+                return ResponseEntity.ok(ApiResponse.success(
+                        productDetail,
+                        "Product detail (similar products: fallback)"
+                ));
+            }
+
             log.info("✅ Similar products: strategy={}, count={}",
                     aiResponse.getStrategy(), aiResponse.getCount());
 
-            // ✅ CONVERT IDs → FULL ProductListingDTO (thay vì chỉ IDs)
+            // ✅ CONVERT IDs → FULL ProductListingDTO
             List<ProductListingDTO> similarProducts = aiResponse.getProduct_ids().stream()
                     .map(productId -> {
                         try {
@@ -109,15 +127,47 @@ public class ProductController {
                     .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
 
-            // ✅ GÁN VÀO RESPONSE (cần thêm field similarProducts trong DTO)
+            // ✅ CHECK NẾU SAU KHI FILTER MÀ EMPTY → FALLBACK
+            if (similarProducts.isEmpty()) {
+                log.warn("⚠️ No valid similar products after filtering - using fallback");
+                similarProducts = getFallbackSimilarProducts(id);
+            }
+
+            // ✅ GÁN VÀO RESPONSE
             productDetail.setSimilarProducts(similarProducts);
 
         } catch (Exception e) {
             log.warn("⚠️ Failed to get similar products: {}", e.getMessage());
-            // Không throw - tiếp tục trả product detail
+
+            // ✅ FALLBACK khi AI service down
+            List<ProductListingDTO> fallbackSimilar = getFallbackSimilarProducts(id);
+            productDetail.setSimilarProducts(fallbackSimilar);
         }
 
         return ResponseEntity.ok(ApiResponse.success(productDetail, "Product detail"));
+    }
+
+    // ✅ THÊM METHOD FALLBACK CHO SIMILAR PRODUCTS
+    private List<ProductListingDTO> getFallbackSimilarProducts(Long excludeProductId) {
+        try {
+            // Lấy 10 sản phẩm mới nhất, loại trừ sản phẩm hiện tại
+            Pageable pageable = PageRequest.of(0, 11, Sort.by("createdAt").descending());
+            Page<ProductListingDTO> latestProducts = productService.searchProducts(
+                    null, null, null, null, null, pageable
+            );
+
+            List<ProductListingDTO> similarProducts = latestProducts.getContent().stream()
+                    .filter(p -> !p.getId().equals(excludeProductId)) // ✅ Loại bỏ chính nó
+                    .limit(10) // ✅ Chỉ lấy 10
+                    .collect(Collectors.toList());
+
+            log.info("✅ Returning {} fallback similar products", similarProducts.size());
+            return similarProducts;
+
+        } catch (Exception e) {
+            log.error("❌ Fallback similar products failed!", e);
+            return Collections.emptyList();
+        }
     }
 
 
@@ -150,6 +200,14 @@ public class ProductController {
             HomepageRecommendDTO aiResponse = recommendationClient
                     .getHomepageRecommendations(userId, 10);
 
+            // ✅ CHECK NULL/EMPTY
+            if (aiResponse == null ||
+                    aiResponse.getProduct_ids() == null ||
+                    aiResponse.getProduct_ids().isEmpty()) {
+                log.warn("⚠️ AI returned empty - using fallback");
+                return getFallbackProducts(); // ← Gọi fallback method
+            }
+
             log.info("✅ AI Response: strategy={}, count={}, ids={}",
                     aiResponse.getStrategy(),
                     aiResponse.getCount(),
@@ -180,6 +238,12 @@ public class ProductController {
 
             log.info("✅ Returning {} products to FE", products.size());
 
+            // ✅ CHECK NẾU SAU KHI FILTER MÀ EMPTY → FALLBACK
+            if (products.isEmpty()) {
+                log.warn("⚠️ No valid products after filtering - using fallback");
+                return getFallbackProducts();
+            }
+
             return ResponseEntity.ok(ApiResponse.success(
                     products,
                     "Recommendations (strategy: " + aiResponse.getStrategy() + ")"
@@ -196,6 +260,33 @@ public class ProductController {
         }
     }
 
+
+    private ResponseEntity<ApiResponse<List<ProductListingDTO>>> getFallbackProducts() {
+        try {
+            // ✅ Lấy 10 sản phẩm mới nhất
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+            Page<ProductListingDTO> latestProducts = productService.searchProducts(
+                    null, null, null, null, null, pageable
+            );
+
+            // ✅ SỬA: Extract List từ Page
+            List<ProductListingDTO> productList = latestProducts.getContent();
+
+            log.info("✅ Returning {} fallback products (latest)", productList.size());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    productList,  // ✅ ĐÚNG: Trả về List
+                    "Latest products (AI unavailable)"
+            ));
+
+        } catch (Exception e) {
+            log.error("❌ Even fallback failed!", e);
+            return ResponseEntity.ok(ApiResponse.success(
+                    Collections.emptyList(),
+                    "Service temporarily unavailable"
+            ));
+        }
+    }
 
 
 }
