@@ -194,9 +194,14 @@ public class ProductController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
 
         log.info("🎯 Homepage recommendations request - userId: {}", userId);
+        // ✅ THÊM LOG ĐỂ DEBUG
+        log.info("🔍 ProductController.getHomepageRecommendations called");
+        log.info("   - userId from header: {}", userId);
+        log.info("   - userId is null: {}", userId == null);
 
         try {
             // ✅ GỌI AI SERVICE (X-API-KEY tự động inject)
+            log.info("🤖 Calling AI service with userId: {}", userId);
             HomepageRecommendDTO aiResponse = recommendationClient
                     .getHomepageRecommendations(userId, 10);
 

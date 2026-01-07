@@ -10,22 +10,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(
         name = "RECOMMEND-SERVICE",
-        configuration = FeignClientConfig.class,  // ✅ THÊM DÒNG NÀY (để auto inject X-API-KEY)
+        configuration = FeignClientConfig.class,
         fallback = RecommendationServiceFallback.class
 )
 public interface RecommendationServiceClient {
 
-    // ✅ ĐỔI Integer → Long
     @GetMapping("/api/v1/internal/recommend/homepage")
     HomepageRecommendDTO getHomepageRecommendations(
-            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ LONG
+            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ Lowercase "user_id"
             @RequestParam(name = "top_k", defaultValue = "10") int topK
     );
 
     @GetMapping("/api/v1/internal/recommend/product-detail/{product_id}")
     SimilarRecommendDTO getProductDetailRecommendations(
             @PathVariable("product_id") String productId,
-            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ LONG
+            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ Lowercase "user_id"
             @RequestParam(name = "top_k", defaultValue = "10") int topK
     );
 }
