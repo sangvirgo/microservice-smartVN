@@ -6,6 +6,7 @@ import com.smartvn.product_service.dto.ai.SimilarRecommendDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(
@@ -17,14 +18,14 @@ public interface RecommendationServiceClient {
 
     @GetMapping("/api/v1/internal/recommend/homepage")
     HomepageRecommendDTO getHomepageRecommendations(
-            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ Lowercase "user_id"
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,  // ✅ Dùng @RequestHeader
             @RequestParam(name = "top_k", defaultValue = "10") int topK
     );
 
     @GetMapping("/api/v1/internal/recommend/product-detail/{product_id}")
     SimilarRecommendDTO getProductDetailRecommendations(
             @PathVariable("product_id") String productId,
-            @RequestParam(name = "user_id", required = false) Long userId,  // ✅ Lowercase "user_id"
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,  // ✅ Dùng @RequestHeader
             @RequestParam(name = "top_k", defaultValue = "10") int topK
     );
 }

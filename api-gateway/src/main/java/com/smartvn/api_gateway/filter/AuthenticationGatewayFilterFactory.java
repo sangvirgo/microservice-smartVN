@@ -29,6 +29,31 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
 
             // Bỏ qua xác thực cho các đường dẫn public
             if (isPublicPath(request)) {
+                String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String jwt = authHeader.substring(7);
+
+                    try {
+                        if (jwtUtils.validateToken(jwt)) {
+                            String userId = jwtUtils.getUserIdFromToken(jwt);
+
+                            // Forward userId sang downstream service
+                            ServerHttpRequest newRequest = request.mutate()
+                                    .header("X-User-Id", userId)
+                                    .build();
+
+                            System.out.println("✅ Public path with JWT - userId: " + userId);
+                            return chain.filter(exchange.mutate().request(newRequest).build());
+                        }
+                    } catch (Exception e) {
+                        // JWT invalid nhưng endpoint public → vẫn cho qua (guest)
+                        System.out.println("⚠️ Public path with invalid JWT - proceeding as guest");
+                    }
+                }
+
+                // Không có JWT hoặc JWT invalid → guest user
+                System.out.println("ℹ️ Public path without JWT - guest user");
                 return chain.filter(exchange);
             }
 
